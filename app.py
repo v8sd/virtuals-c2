@@ -1,6 +1,6 @@
 """
-VIRTUALS C2 - LANDING PAGE EDITION
-Hello Nothing Happens Here · Hidden Login · Working Auth
+VIRTUALS C2 - BIGGER CONSOLE EDITION
+15% Bigger Console Elements · Better Visibility
 BY: YOUR STAR BESTIE
 """
 
@@ -234,7 +234,7 @@ body{background:linear-gradient(135deg,#0a0a0f,#1a0a2e);color:#c8c8d0;font-famil
 '''
 
 # ============================================
-# HTML - LOGIN PAGE (NO AUTO-FILL)
+# HTML - LOGIN PAGE
 # ============================================
 LOGIN_PAGE = '''
 <!DOCTYPE html>
@@ -282,7 +282,7 @@ function login(e){e.preventDefault();const u=document.getElementById('username')
 '''
 
 # ============================================
-# HTML - DASHBOARD
+# HTML - DASHBOARD WITH BIGGER CONSOLE
 # ============================================
 DASHBOARD = '''
 <!DOCTYPE html>
@@ -348,21 +348,23 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 .chat-messages .sender.victim{color:#ddbb88}
 .chat-messages .sender.system{color:#8888aa}
 .chat-messages .sender.embed{color:#ffd700}
-.chat-input-area{display:flex;gap:4px;margin-top:4px;flex-shrink:0}
-.chat-input-area input{flex:1;padding:5px 10px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.05);border-radius:4px;color:#c8c8d0;font-family:inherit;font-size:13px;outline:none;min-height:30px}
+.chat-input-area{display:flex;gap:5px;margin-top:5px;flex-shrink:0}
+.chat-input-area input{flex:1;padding:7px 14px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.05);border-radius:5px;color:#c8c8d0;font-family:inherit;font-size:16px;outline:none;min-height:38px}
 .chat-input-area input:focus{border-color:rgba(255,255,255,0.12)}
-.chat-input-area input::placeholder{color:#444458;font-size:11px}
-.chat-input-area button{padding:5px 14px;background:rgba(255,255,255,0.04);color:#b0b0c0;border:1px solid rgba(255,255,255,0.06);border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px;transition:0.15s}
+.chat-input-area input::placeholder{color:#444458;font-size:14px}
+.chat-input-area button{padding:7px 20px;background:rgba(255,255,255,0.04);color:#b0b0c0;border:1px solid rgba(255,255,255,0.06);border-radius:5px;cursor:pointer;font-family:inherit;font-size:15px;transition:0.15s;min-height:38px}
 .chat-input-area button:hover{background:rgba(255,255,255,0.08);color:#e8e8f0}
-.file-upload-area{display:flex;gap:4px;margin-top:3px;flex-shrink:0;flex-wrap:wrap;align-items:center}
-.file-upload-area input[type="file"]{flex:1;padding:2px 6px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.04);border-radius:4px;color:#c8c8d0;font-size:11px;min-width:40px}
-.file-upload-area button{padding:2px 10px;background:rgba(50,180,200,0.1);color:#88ccdd;border:1px solid rgba(50,180,200,0.15);border-radius:4px;cursor:pointer;font-size:11px;transition:0.15s}
+.file-upload-area{display:flex;gap:5px;margin-top:4px;flex-shrink:0;flex-wrap:wrap;align-items:center}
+.file-upload-area input[type="file"]{flex:1;padding:4px 10px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.04);border-radius:5px;color:#c8c8d0;font-size:14px;min-width:60px;min-height:34px}
+.file-upload-area input[type="file"]::file-selector-button{padding:4px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:4px;color:#b0b0c0;cursor:pointer;font-size:13px;margin-right:10px}
+.file-upload-area input[type="file"]::file-selector-button:hover{background:rgba(255,255,255,0.08)}
+.file-upload-area button{padding:4px 16px;background:rgba(50,180,200,0.1);color:#88ccdd;border:1px solid rgba(50,180,200,0.15);border-radius:5px;cursor:pointer;font-size:14px;transition:0.15s;min-height:34px}
 .file-upload-area button:hover{background:rgba(50,180,200,0.18)}
-.file-upload-area #fileName{color:#555568;font-size:10px;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-upload-area #fileName{color:#555568;font-size:13px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .upload-progress{width:100%;height:2px;background:rgba(255,255,255,0.04);border-radius:1px;margin-top:2px;overflow:hidden;display:none}
 .upload-progress .bar{height:100%;background:linear-gradient(90deg,#44dd88,#88ccdd);width:0%;transition:width 0.3s}
-.download-section{display:flex;gap:5px;margin-top:3px;flex-shrink:0;flex-wrap:wrap}
-.download-section button{background:rgba(50,180,120,0.12);color:#66ddbb;border:1px solid rgba(50,180,120,0.15);padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;transition:0.15s}
+.download-section{display:flex;gap:6px;margin-top:4px;flex-shrink:0;flex-wrap:wrap}
+.download-section button{background:rgba(50,180,120,0.12);color:#66ddbb;border:1px solid rgba(50,180,120,0.15);padding:5px 16px;border-radius:5px;cursor:pointer;font-size:14px;transition:0.15s;min-height:34px}
 .download-section button:hover{background:rgba(50,180,120,0.2)}
 .download-section .zip-btn{background:rgba(50,180,200,0.12);color:#88ccdd;border:1px solid rgba(50,180,200,0.15)}
 .download-section .zip-btn:hover{background:rgba(50,180,200,0.2)}
@@ -704,8 +706,8 @@ def heartbeat():
 if __name__ == '__main__':
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
-    ║   VIRTUALS C2 - LANDING PAGE EDITION                       ║
-    ║   Hello Nothing Happens Here · Hidden Login · Working Auth ║
+    ║   VIRTUALS C2 - BIGGER CONSOLE EDITION                     ║
+    ║   15% Bigger Console Elements · Better Visibility          ║
     ╚═══════════════════════════════════════════════════════════════╝
     """)
     print(f"[*] Server: http://localhost:{PORT}")
