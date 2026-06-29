@@ -1,6 +1,6 @@
 """
-OMEGA C2 - SIMPLIFIED
-2 Logins Only · Owner & User · Everything Working
+OMEGA C2 - COMPLETE GUI OVERHAUL
+Brand new design · Different colors · Modern layout
 BY: SNIN STAR
 """
 
@@ -67,46 +67,37 @@ def init_db():
         timestamp TEXT
     )''')
     
-    # Insert users
     for username, info in USERS.items():
         hashed = hashlib.md5(info['password'].encode()).hexdigest()
         c.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
                  (username, hashed, info['role']))
     
-    # Insert victims with browser data
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     victims = [
         ("PC-ALPHA", "DESKTOP-001", "192.168.1.101", "Windows 11", "Online", now, "US", "", json.dumps({
             "chrome": {"passwords": 247, "cookies": 893, "history": 1245, "bookmarks": 89},
-            "edge": {"passwords": 156, "cookies": 512, "history": 789, "bookmarks": 45},
-            "firefox": {"passwords": 123, "cookies": 445, "history": 678, "bookmarks": 34},
-            "brave": {"passwords": 89, "cookies": 234, "history": 456, "bookmarks": 23}
+            "edge": {"passwords": 156, "cookies": 512, "history": 789, "bookmarks": 45}
         })),
         ("PC-BETA", "LAPTOP-002", "192.168.1.102", "Windows 10", "Online", now, "UK", "", json.dumps({
             "chrome": {"passwords": 312, "cookies": 1024, "history": 1567, "bookmarks": 112},
-            "edge": {"passwords": 89, "cookies": 234, "history": 456, "bookmarks": 23},
             "firefox": {"passwords": 67, "cookies": 189, "history": 345, "bookmarks": 12}
         })),
         ("SRV-GAMMA", "SERVER-003", "192.168.1.103", "Server 2022", "Online", now, "DE", "", json.dumps({
-            "chrome": {"passwords": 89, "cookies": 234, "history": 456, "bookmarks": 23},
-            "edge": {"passwords": 156, "cookies": 512, "history": 789, "bookmarks": 45}
+            "chrome": {"passwords": 89, "cookies": 234, "history": 456, "bookmarks": 23}
         })),
         ("PC-DELTA", "GAMING-004", "192.168.1.104", "Windows 11", "Online", now, "CA", "", json.dumps({
             "chrome": {"passwords": 445, "cookies": 1567, "history": 2345, "bookmarks": 156},
-            "edge": {"passwords": 234, "cookies": 789, "history": 1234, "bookmarks": 67},
-            "firefox": {"passwords": 178, "cookies": 567, "history": 890, "bookmarks": 34}
+            "brave": {"passwords": 89, "cookies": 234, "history": 456, "bookmarks": 23}
         })),
         ("VM-EPSILON", "VM-005", "192.168.1.105", "Windows 10", "Online", now, "US", "VM", json.dumps({
             "chrome": {"passwords": 34, "cookies": 89, "history": 123, "bookmarks": 5}
         })),
         ("PC-ZETA", "WORK-006", "192.168.1.106", "Windows 11", "Online", now, "FR", "", json.dumps({
             "chrome": {"passwords": 567, "cookies": 2034, "history": 3456, "bookmarks": 234},
-            "edge": {"passwords": 345, "cookies": 1234, "history": 2345, "bookmarks": 89},
             "firefox": {"passwords": 234, "cookies": 890, "history": 1567, "bookmarks": 56}
         })),
         ("SRV-ETA", "WEB-007", "192.168.1.107", "Ubuntu", "Online", now, "US", "", json.dumps({
-            "chrome": {"passwords": 78, "cookies": 234, "history": 567, "bookmarks": 23},
-            "firefox": {"passwords": 56, "cookies": 189, "history": 345, "bookmarks": 12}
+            "chrome": {"passwords": 78, "cookies": 234, "history": 567, "bookmarks": 23}
         }))
     ]
     
@@ -120,9 +111,6 @@ def init_db():
 
 init_db()
 
-# ============================================
-# DECORATOR
-# ============================================
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -132,7 +120,7 @@ def login_required(f):
     return decorated
 
 # ============================================
-# HTML - LANDING
+# HTML - LANDING (NEW DESIGN)
 # ============================================
 LANDING = '''
 <!DOCTYPE html>
@@ -140,20 +128,28 @@ LANDING = '''
 <head>
     <title>OMEGA C2</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
         *{margin:0;padding:0;box-sizing:border-box}
-        body{background:#06060f;color:#c0c0d0;font-family:'Segoe UI',sans-serif;height:100vh;display:flex;justify-content:center;align-items:center}
-        .container{text-align:center}
-        h1{font-size:80px;font-weight:100;letter-spacing:15px;background:linear-gradient(135deg,#ff6b6b,#ffd93d);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .sub{color:#444;font-size:14px;letter-spacing:5px;margin-top:10px}
-        .sub .dot{color:#ff6b6b}
-        .login-btn{position:fixed;bottom:30px;right:30px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);display:flex;justify-content:center;align-items:center;font-size:24px;color:#444;text-decoration:none;transition:0.3s}
-        .login-btn:hover{background:rgba(255,107,107,0.1);border-color:rgba(255,107,107,0.2);color:#ff6b6b}
+        body{background:#0a0a1a;color:#c0c0d0;font-family:'Orbitron',sans-serif;height:100vh;display:flex;justify-content:center;align-items:center;overflow:hidden}
+        .bg{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at 30% 50%, rgba(0,255,200,0.03) 0%, transparent 70%), radial-gradient(ellipse at 70% 50%, rgba(255,0,200,0.03) 0%, transparent 70%);z-index:0}
+        .container{text-align:center;z-index:1;animation:fadeIn 1.5s ease}
+        @keyframes fadeIn{0%{opacity:0;transform:scale(0.9)}100%{opacity:1;transform:scale(1)}}
+        .glitch{font-size:90px;font-weight:900;letter-spacing:25px;background:linear-gradient(135deg,#00ffc8,#ff00c8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 60px rgba(0,255,200,0.1)}
+        .sub{color:#333;font-size:12px;letter-spacing:10px;margin-top:15px;border-top:1px solid rgba(255,255,255,0.03);padding-top:15px}
+        .sub .dot{color:#00ffc8;display:inline-block;animation:pulse 1.5s infinite}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.2}}
+        .login-btn{position:fixed;bottom:40px;right:40px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);display:flex;justify-content:center;align-items:center;font-size:28px;color:#333;text-decoration:none;transition:0.5s;z-index:10;backdrop-filter:blur(10px)}
+        .login-btn:hover{background:rgba(0,255,200,0.05);border-color:rgba(0,255,200,0.1);color:#00ffc8;transform:scale(1.1);box-shadow:0 0 40px rgba(0,255,200,0.05)}
+        .status{color:#1a1a2a;font-size:9px;letter-spacing:4px;margin-top:20px}
+        .status span{color:#00ffc8}
     </style>
 </head>
 <body>
+    <div class="bg"></div>
     <div class="container">
-        <h1>◈ OMEGA</h1>
+        <div class="glitch">◈ OMEGA</div>
         <div class="sub"><span class="dot">●</span> COMMAND &amp; CONTROL</div>
+        <div class="status">● <span>7</span> agents online</div>
     </div>
     <a href="/login" class="login-btn">⌘</a>
 </body>
@@ -161,7 +157,7 @@ LANDING = '''
 '''
 
 # ============================================
-# HTML - LOGIN
+# HTML - LOGIN (NEW DESIGN)
 # ============================================
 LOGIN = '''
 <!DOCTYPE html>
@@ -169,28 +165,31 @@ LOGIN = '''
 <head>
     <title>OMEGA C2 - Login</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
         *{margin:0;padding:0;box-sizing:border-box}
-        body{background:#06060f;color:#c0c0d0;font-family:'Segoe UI',sans-serif;height:100vh;display:flex;justify-content:center;align-items:center}
-        .box{background:rgba(10,10,20,0.9);border:1px solid rgba(255,255,255,0.04);border-radius:16px;padding:45px;width:380px;max-width:92%}
-        h1{font-size:28px;font-weight:100;text-align:center;letter-spacing:8px;background:linear-gradient(135deg,#ff6b6b,#ffd93d);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .sub{color:#444;text-align:center;font-size:11px;margin-bottom:30px;letter-spacing:4px;border-bottom:1px solid rgba(255,255,255,0.03);padding-bottom:15px}
-        .sub .dot{color:#ff6b6b}
-        label{color:#666;font-size:10px;display:block;margin-bottom:5px;letter-spacing:2px;text-transform:uppercase}
-        input{width:100%;padding:14px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:8px;color:#c0c0d0;font-size:14px;outline:none;margin-bottom:15px;transition:0.3s}
-        input:focus{border-color:rgba(255,107,107,0.2);background:rgba(255,255,255,0.03)}
-        input::placeholder{color:#222}
-        button{width:100%;padding:14px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.1);border-radius:8px;color:#ff6b6b;font-size:15px;cursor:pointer;transition:0.3s;font-weight:600;letter-spacing:3px}
-        button:hover{background:rgba(255,107,107,0.2)}
-        .error{color:#ff6b6b;text-align:center;margin-top:12px;display:none;font-size:12px;background:rgba(255,107,107,0.05);padding:8px;border-radius:6px}
-        .back{text-align:center;margin-top:15px;font-size:10px;color:#333}
-        .back a{color:#444;text-decoration:none}
-        .back a:hover{color:#ff6b6b}
-        .users{color:#222;font-size:9px;margin-top:15px;border-top:1px solid rgba(255,255,255,0.02);padding-top:15px;text-align:center;letter-spacing:1px}
+        body{background:#0a0a1a;color:#c0c0d0;font-family:'Orbitron',sans-serif;height:100vh;display:flex;justify-content:center;align-items:center}
+        .bg{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at 30% 50%, rgba(0,255,200,0.03) 0%, transparent 70%), radial-gradient(ellipse at 70% 50%, rgba(255,0,200,0.03) 0%, transparent 70%);z-index:0}
+        .box{background:rgba(10,10,30,0.95);border:1px solid rgba(255,255,255,0.03);border-radius:20px;padding:50px 45px;width:400px;max-width:92%;z-index:1;backdrop-filter:blur(20px);box-shadow:0 40px 80px rgba(0,0,0,0.6)}
+        h1{font-size:30px;font-weight:900;text-align:center;letter-spacing:8px;background:linear-gradient(135deg,#00ffc8,#ff00c8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .sub{color:#333;text-align:center;font-size:10px;margin-bottom:35px;letter-spacing:6px;border-bottom:1px solid rgba(255,255,255,0.02);padding-bottom:15px}
+        .sub .dot{color:#00ffc8}
+        label{color:#444;font-size:9px;display:block;margin-bottom:6px;letter-spacing:3px;text-transform:uppercase}
+        input{width:100%;padding:14px 18px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);border-radius:10px;color:#c0c0d0;font-size:14px;outline:none;margin-bottom:18px;transition:0.3s;font-family:'Orbitron',sans-serif}
+        input:focus{border-color:rgba(0,255,200,0.1);background:rgba(255,255,255,0.03);box-shadow:0 0 30px rgba(0,255,200,0.02)}
+        input::placeholder{color:#1a1a2a}
+        button{width:100%;padding:14px;background:linear-gradient(135deg,rgba(0,255,200,0.05),rgba(255,0,200,0.05));border:1px solid rgba(0,255,200,0.05);border-radius:10px;color:#00ffc8;font-size:14px;cursor:pointer;transition:0.3s;font-weight:700;letter-spacing:4px;font-family:'Orbitron',sans-serif}
+        button:hover{background:linear-gradient(135deg,rgba(0,255,200,0.1),rgba(255,0,200,0.05));box-shadow:0 0 40px rgba(0,255,200,0.05)}
+        .error{color:#ff6b6b;text-align:center;margin-top:14px;display:none;font-size:10px;background:rgba(255,107,107,0.03);padding:10px;border-radius:8px;border:1px solid rgba(255,107,107,0.05);letter-spacing:2px}
+        .back{text-align:center;margin-top:18px;font-size:9px;color:#1a1a2a}
+        .back a{color:#2a2a3a;text-decoration:none;transition:0.3s;letter-spacing:2px}
+        .back a:hover{color:#00ffc8}
+        .users{color:#1a1a2a;font-size:8px;margin-top:15px;border-top:1px solid rgba(255,255,255,0.01);padding-top:15px;text-align:center;letter-spacing:3px}
         .users .owner{color:#ffd93d}
-        .users .user{color:#6bcfff}
+        .users .user{color:#00ffc8}
     </style>
 </head>
 <body>
+    <div class="bg"></div>
     <div class="box">
         <h1>◈ OMEGA</h1>
         <div class="sub"><span class="dot">●</span> AUTHENTICATE</div>
@@ -202,8 +201,8 @@ LOGIN = '''
             <button type="submit">ACCESS</button>
             <div class="error" id="err">⛔ Invalid credentials</div>
         </form>
-        <div class="back"><a href="/">← Back</a></div>
-        <div class="users"><span class="owner">👑 owner</span> · <span class="user">👤 user</span></div>
+        <div class="back"><a href="/">← BACK</a></div>
+        <div class="users"><span class="owner">👑 owner</span> · <span class="user">⚡ user</span></div>
     </div>
     <script>
         function login(e){
@@ -233,94 +232,99 @@ LOGIN = '''
 '''
 
 # ============================================
-# HTML - DASHBOARD
+# HTML - DASHBOARD (COMPLETELY NEW DESIGN)
 # ============================================
 DASHBOARD = '''
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>OMEGA C2 - Terminal</title>
+    <title>OMEGA C2</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Fira+Code:wght@300;400;600;700&display=swap');
         *{margin:0;padding:0;box-sizing:border-box}
-        body{background:#0a0a12;color:#c0c0d0;font-family:'Fira Code',monospace;height:100vh;overflow:hidden;font-size:13px}
-        ::-webkit-scrollbar{width:3px}
-        ::-webkit-scrollbar-thumb{background:rgba(255,107,107,0.15)}
+        body{background:#070714;color:#c0c0d0;font-family:'Fira Code',monospace;height:100vh;overflow:hidden}
+        ::-webkit-scrollbar{width:2px}
+        ::-webkit-scrollbar-thumb{background:rgba(0,255,200,0.1);border-radius:10px}
         ::-webkit-scrollbar-track{background:transparent}
         
-        .header{background:rgba(6,6,15,0.98);padding:8px 24px;border-bottom:1px solid rgba(255,107,107,0.05);display:flex;justify-content:space-between;align-items:center;height:50px}
-        .header .logo{font-size:18px;font-weight:700;letter-spacing:6px;background:linear-gradient(135deg,#ff6b6b,#ffd93d);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .header-right{display:flex;align-items:center;gap:18px}
-        .stats{display:flex;gap:16px;font-size:10px;color:#333}
-        .stats span{color:#c0c0d0;font-weight:600;font-size:13px;margin-left:4px}
-        .stats .online{color:#6bcfff}
-        .user-info{display:flex;align-items:center;gap:8px;font-size:12px}
-        .user-info .name{color:#e0e0f0}
-        .user-info .role{font-size:8px;padding:3px 12px;border-radius:12px;text-transform:uppercase;font-weight:700;letter-spacing:1px}
-        .user-info .role.owner{background:rgba(255,217,61,0.12);color:#ffd93d;border:1px solid rgba(255,217,61,0.06)}
-        .user-info .role.user{background:rgba(107,207,255,0.08);color:#6bcfff;border:1px solid rgba(107,207,255,0.04)}
-        .logout{background:rgba(255,107,107,0.05);color:#664444;border:1px solid rgba(255,107,107,0.04);padding:4px 16px;border-radius:12px;cursor:pointer;font-size:9px;transition:0.3s;font-family:'Fira Code',monospace}
-        .logout:hover{background:rgba(255,107,107,0.1);color:#ff6b6b}
+        /* HEADER - Cyber */
+        .header{background:rgba(7,7,20,0.98);padding:10px 30px;border-bottom:1px solid rgba(0,255,200,0.03);display:flex;justify-content:space-between;align-items:center;height:55px}
+        .header .logo{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;letter-spacing:8px;background:linear-gradient(135deg,#00ffc8,#ff00c8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .header-right{display:flex;align-items:center;gap:20px}
+        .stats{display:flex;gap:20px;font-size:9px;color:#1a1a3a;letter-spacing:2px}
+        .stats span{color:#c0c0d0;font-weight:700;font-size:14px;margin-left:5px;font-family:'Orbitron',sans-serif}
+        .stats .online{color:#00ffc8}
+        .user-info{display:flex;align-items:center;gap:10px;font-size:11px}
+        .user-info .name{color:#c0c0d0;font-weight:300}
+        .user-info .role{font-size:7px;padding:4px 14px;border-radius:20px;text-transform:uppercase;font-weight:700;letter-spacing:2px;font-family:'Orbitron',sans-serif}
+        .user-info .role.owner{background:rgba(255,217,61,0.06);color:#ffd93d;border:1px solid rgba(255,217,61,0.04)}
+        .user-info .role.user{background:rgba(0,255,200,0.04);color:#00ffc8;border:1px solid rgba(0,255,200,0.02)}
+        .logout{background:rgba(255,107,107,0.02);color:#442222;border:1px solid rgba(255,107,107,0.02);padding:5px 18px;border-radius:20px;cursor:pointer;font-size:8px;transition:0.3s;font-family:'Orbitron',sans-serif;letter-spacing:2px}
+        .logout:hover{background:rgba(255,107,107,0.04);color:#ff6b6b;border-color:rgba(255,107,107,0.04)}
         
-        .container{display:flex;height:calc(100vh - 50px);padding:6px;gap:6px}
+        /* MAIN */
+        .container{display:flex;height:calc(100vh - 55px);padding:8px;gap:8px}
         
-        .left{width:160px;min-width:160px;background:rgba(8,8,18,0.9);border:1px solid rgba(255,255,255,0.02);border-radius:8px;padding:6px;display:flex;flex-direction:column}
-        .left .title{color:#333;font-size:7px;text-transform:uppercase;letter-spacing:3px;padding:6px 8px 4px;border-bottom:1px solid rgba(255,255,255,0.02)}
+        /* LEFT - AGENTS */
+        .left{width:180px;min-width:180px;background:rgba(7,7,20,0.9);border:1px solid rgba(255,255,255,0.02);border-radius:12px;padding:8px;display:flex;flex-direction:column}
+        .left .title{color:#1a1a3a;font-size:7px;text-transform:uppercase;letter-spacing:4px;padding:8px 10px 6px;border-bottom:1px solid rgba(255,255,255,0.01);font-family:'Orbitron',sans-serif}
         .victims{flex:1;overflow-y:auto;padding:4px}
-        .victim{padding:4px 8px;margin:2px 0;border-radius:4px;cursor:pointer;border-left:2px solid transparent;font-size:11px;display:flex;align-items:center;gap:6px;transition:0.15s}
-        .victim:hover{background:rgba(255,255,255,0.02)}
-        .victim.active{background:rgba(255,107,107,0.04);border-left-color:#ff6b6b}
+        .victim{padding:6px 10px;margin:2px 0;border-radius:6px;cursor:pointer;border-left:2px solid transparent;font-size:10px;display:flex;align-items:center;gap:8px;transition:0.15s}
+        .victim:hover{background:rgba(255,255,255,0.01)}
+        .victim.active{background:rgba(0,255,200,0.02);border-left-color:#00ffc8}
         .victim .dot{width:5px;height:5px;border-radius:50%;display:inline-block}
-        .victim .dot.online{background:#6bcfff;box-shadow:0 0 8px rgba(107,207,255,0.2)}
-        .victim .dot.offline{background:#332222}
-        .victim .name{color:#c0c0d0;flex:1}
-        .victim .badge{font-size:6px;padding:0 5px;border-radius:8px;background:rgba(255,107,107,0.06);color:#664444}
-        .victim .act{color:#333;font-size:7px}
+        .victim .dot.online{background:#00ffc8;box-shadow:0 0 10px rgba(0,255,200,0.15)}
+        .victim .dot.offline{background:#221111}
+        .victim .name{color:#c0c0d0;flex:1;font-size:10px}
+        .victim .badge{font-size:5px;padding:0 6px;border-radius:10px;background:rgba(255,107,107,0.04);color:#442222;font-family:'Orbitron',sans-serif}
+        .victim .act{color:#1a1a3a;font-size:7px}
         
-        .middle{flex:1;display:flex;flex-direction:column;gap:6px}
-        .console{background:rgba(8,8,18,0.9);border:1px solid rgba(255,255,255,0.02);border-radius:8px;padding:8px 12px;flex:1;display:flex;flex-direction:column}
-        .console .title{color:#333;font-size:7px;text-transform:uppercase;letter-spacing:3px;border-bottom:1px solid rgba(255,255,255,0.02);padding-bottom:6px;display:flex;justify-content:space-between}
-        .console .title .target{color:#ff6b6b;font-weight:600;font-size:8px;letter-spacing:1px}
-        .msgs{background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.01);border-radius:6px;padding:6px 10px;flex:1;overflow-y:auto;font-size:12px;line-height:1.8;min-height:100px;max-height:160px;font-family:'Fira Code',monospace}
-        .msgs .msg{padding:1px 0;border-bottom:1px solid rgba(255,255,255,0.005)}
-        .msgs .time{color:#222;font-size:8px;margin-right:6px}
-        .msgs .sender{font-weight:600;font-size:11px}
-        .msgs .sender.user{color:#6bcfff}
-        .msgs .sender.system{color:#444}
+        /* MIDDLE - TERMINAL */
+        .middle{flex:1;display:flex;flex-direction:column;gap:8px}
+        .terminal{background:rgba(7,7,20,0.9);border:1px solid rgba(255,255,255,0.02);border-radius:12px;padding:10px 14px;flex:1;display:flex;flex-direction:column}
+        .terminal .title{color:#1a1a3a;font-size:7px;text-transform:uppercase;letter-spacing:4px;border-bottom:1px solid rgba(255,255,255,0.01);padding-bottom:8px;display:flex;justify-content:space-between;font-family:'Orbitron',sans-serif}
+        .terminal .title .target{color:#00ffc8;font-weight:700;font-size:8px;letter-spacing:2px}
+        .msgs{background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.005);border-radius:8px;padding:8px 12px;flex:1;overflow-y:auto;font-size:11px;line-height:2;min-height:100px;max-height:160px}
+        .msgs .msg{padding:1px 0;border-bottom:1px solid rgba(255,255,255,0.003)}
+        .msgs .time{color:#111122;font-size:7px;margin-right:8px}
+        .msgs .sender{font-weight:600;font-size:10px}
+        .msgs .sender.user{color:#00ffc8}
+        .msgs .sender.system{color:#333}
         .msgs .sender.victim{color:#ffd93d}
         .msgs .sender.cmd{color:#ff6b6b}
-        .input-area{display:flex;gap:5px;margin-top:6px}
-        .input-area input{flex:1;padding:7px 14px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.02);border-radius:6px;color:#c0c0d0;font-size:12px;outline:none;font-family:'Fira Code',monospace}
-        .input-area input:focus{border-color:rgba(255,107,107,0.08);background:rgba(0,0,0,0.4)}
-        .input-area input::placeholder{color:#1a1a2a}
-        .input-area button{padding:7px 18px;background:rgba(255,107,107,0.03);color:#ff6b6b;border:1px solid rgba(255,107,107,0.04);border-radius:6px;cursor:pointer;font-size:11px;transition:0.2s;font-family:'Fira Code',monospace}
-        .input-area button:hover{background:rgba(255,107,107,0.08);color:#ff6b6b}
-        .cmds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
-        .cmds span{padding:2px 10px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.02);border-radius:4px;font-size:9px;color:#444;cursor:pointer;transition:0.2s;font-family:'Fira Code',monospace}
-        .cmds span:hover{background:rgba(255,107,107,0.04);color:#ff6b6b;border-color:rgba(255,107,107,0.04)}
-        .actions{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
-        .actions button{padding:3px 14px;background:rgba(107,207,255,0.03);color:#6bcfff;border:1px solid rgba(107,207,255,0.03);border-radius:4px;cursor:pointer;font-size:9px;font-family:'Fira Code',monospace;transition:0.2s}
-        .actions button:hover{background:rgba(107,207,255,0.06)}
-        .actions .zip{background:rgba(255,217,61,0.03);color:#ffd93d;border:1px solid rgba(255,217,61,0.03)}
-        .actions .zip:hover{background:rgba(255,217,61,0.06)}
+        .input-area{display:flex;gap:6px;margin-top:8px}
+        .input-area input{flex:1;padding:8px 16px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.01);border-radius:8px;color:#c0c0d0;font-size:11px;outline:none;font-family:'Fira Code',monospace;transition:0.2s}
+        .input-area input:focus{border-color:rgba(0,255,200,0.03);background:rgba(0,0,0,0.3)}
+        .input-area input::placeholder{color:#111122}
+        .input-area button{padding:8px 22px;background:rgba(0,255,200,0.02);color:#00ffc8;border:1px solid rgba(0,255,200,0.02);border-radius:8px;cursor:pointer;font-size:10px;transition:0.2s;font-family:'Orbitron',sans-serif;letter-spacing:2px}
+        .input-area button:hover{background:rgba(0,255,200,0.04);color:#00ffc8}
+        .cmds{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+        .cmds span{padding:3px 12px;background:rgba(255,255,255,0.005);border:1px solid rgba(255,255,255,0.005);border-radius:6px;font-size:8px;color:#1a1a3a;cursor:pointer;transition:0.2s;font-family:'Orbitron',sans-serif;letter-spacing:1px}
+        .cmds span:hover{background:rgba(0,255,200,0.02);color:#00ffc8;border-color:rgba(0,255,200,0.02)}
+        .actions{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+        .actions button{padding:4px 16px;background:rgba(255,217,61,0.01);color:#444;border:1px solid rgba(255,217,61,0.01);border-radius:6px;cursor:pointer;font-size:8px;font-family:'Orbitron',sans-serif;letter-spacing:2px;transition:0.2s}
+        .actions button:hover{background:rgba(255,217,61,0.02);color:#ffd93d}
+        .actions .zip{background:rgba(0,255,200,0.01);color:#333;border:1px solid rgba(0,255,200,0.01)}
+        .actions .zip:hover{background:rgba(0,255,200,0.02);color:#00ffc8}
         
-        .right{width:210px;min-width:170px;display:flex;flex-direction:column;gap:6px}
-        .details{background:rgba(8,8,18,0.9);border:1px solid rgba(255,255,255,0.02);border-radius:8px;padding:8px 12px;height:45%;overflow-y:auto}
-        .details .title{color:#333;font-size:7px;text-transform:uppercase;letter-spacing:3px;border-bottom:1px solid rgba(255,255,255,0.02);padding-bottom:5px;margin-bottom:5px}
-        .detail-item{padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.01);font-size:10px;display:flex;justify-content:space-between}
-        .detail-item .label{color:#333}
-        .detail-item .value{color:#c0c0d0}
-        .logs{background:rgba(8,8,18,0.9);border:1px solid rgba(255,255,255,0.02);border-radius:8px;padding:8px 12px;flex:1;overflow-y:auto}
-        .logs .title{color:#333;font-size:7px;text-transform:uppercase;letter-spacing:3px;border-bottom:1px solid rgba(255,255,255,0.02);padding-bottom:5px;margin-bottom:5px}
-        .log-item{font-size:8px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.005);display:flex;gap:4px;align-items:center}
-        .log-item .time{color:#1a1a2a}
-        .log-item .user{color:#6bcfff}
-        .log-item .action{color:#666}
-        .log-item .type{font-size:5px;padding:0 5px;border-radius:6px;text-transform:uppercase;letter-spacing:0.5px}
-        .log-item .type.cmd{background:rgba(255,107,107,0.06);color:#ff6b6b}
-        .log-item .type.msg{background:rgba(107,207,255,0.04);color:#6bcfff}
-        .log-item .type.sys{background:rgba(255,255,255,0.01);color:#333}
+        /* RIGHT - DETAILS + LOGS */
+        .right{width:230px;min-width:190px;display:flex;flex-direction:column;gap:8px}
+        .details{background:rgba(7,7,20,0.9);border:1px solid rgba(255,255,255,0.02);border-radius:12px;padding:10px 14px;height:45%;overflow-y:auto}
+        .details .title{color:#1a1a3a;font-size:7px;text-transform:uppercase;letter-spacing:4px;border-bottom:1px solid rgba(255,255,255,0.01);padding-bottom:6px;margin-bottom:6px;font-family:'Orbitron',sans-serif}
+        .detail-item{padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.003);font-size:9px;display:flex;justify-content:space-between}
+        .detail-item .label{color:#1a1a3a;font-size:8px}
+        .detail-item .value{color:#c0c0d0;font-size:9px}
+        .logs{background:rgba(7,7,20,0.9);border:1px solid rgba(255,255,255,0.02);border-radius:12px;padding:10px 14px;flex:1;overflow-y:auto}
+        .logs .title{color:#1a1a3a;font-size:7px;text-transform:uppercase;letter-spacing:4px;border-bottom:1px solid rgba(255,255,255,0.01);padding-bottom:6px;margin-bottom:6px;font-family:'Orbitron',sans-serif}
+        .log-item{font-size:7px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.003);display:flex;gap:6px;align-items:center}
+        .log-item .time{color:#111122}
+        .log-item .user{color:#00ffc8;font-size:7px}
+        .log-item .action{color:#444}
+        .log-item .type{font-size:4px;padding:0 6px;border-radius:10px;text-transform:uppercase;letter-spacing:1px}
+        .log-item .type.cmd{background:rgba(255,107,107,0.03);color:#ff6b6b}
+        .log-item .type.msg{background:rgba(0,255,200,0.02);color:#00ffc8}
+        .log-item .type.sys{background:rgba(255,255,255,0.005);color:#1a1a3a}
     </style>
 </head>
 <body>
@@ -342,11 +346,11 @@ DASHBOARD = '''
     <div class="container">
         <div class="left">
             <div class="title">AGENTS</div>
-            <div class="victims" id="victimList"><div style="color:#1a1a2a;font-size:10px;text-align:center;padding:20px;">initializing...</div></div>
+            <div class="victims" id="victimList"><div style="color:#111122;font-size:9px;text-align:center;padding:20px;">scanning...</div></div>
         </div>
         
         <div class="middle">
-            <div class="console">
+            <div class="terminal">
                 <div class="title">TERMINAL <span class="target" id="curTarget">#general</span></div>
                 <div class="msgs" id="msgBox"><div class="msg"><span class="time">[system]</span><span class="sender system">omega</span> ready</div></div>
                 <div class="input-area">
@@ -358,15 +362,15 @@ DASHBOARD = '''
                     <span onclick="runCmd('scan')">scan</span>
                     <span onclick="runCmd('status')">status</span>
                     <span onclick="runCmd('steal')">steal</span>
-                    <span onclick="runCmd('screenshot')">screenshot</span>
+                    <span onclick="runCmd('screenshot')">ss</span>
                     <span onclick="runCmd('destroy')">destroy</span>
                     <span onclick="runCmd('persist')">persist</span>
                     <span onclick="runCmd('flash')">flash</span>
-                    <span onclick="runCmd('vmcheck')">vmcheck</span>
+                    <span onclick="runCmd('vmcheck')">vm</span>
                 </div>
                 <div class="actions">
                     <button onclick="window.open('/download-rat','_blank')">⬇ RAT</button>
-                    <button class="zip" onclick="getZip()">📦 FULL DATA</button>
+                    <button class="zip" onclick="getZip()">📦 DATA</button>
                 </div>
             </div>
         </div>
@@ -374,11 +378,11 @@ DASHBOARD = '''
         <div class="right">
             <div class="details">
                 <div class="title">DETAILS</div>
-                <div id="detailBox"><div style="color:#1a1a2a;font-size:10px;padding:12px;text-align:center;">select agent</div></div>
+                <div id="detailBox"><div style="color:#111122;font-size:9px;padding:15px;text-align:center;">select agent</div></div>
             </div>
             <div class="logs">
                 <div class="title">ACTIVITY</div>
-                <div id="logBox"><div style="color:#1a1a2a;font-size:8px;padding:6px;">awaiting activity</div></div>
+                <div id="logBox"><div style="color:#111122;font-size:7px;padding:8px;">awaiting activity</div></div>
             </div>
         </div>
     </div>
@@ -393,13 +397,10 @@ DASHBOARD = '''
                 if(d.success){
                     state.currentUser = d.username;
                     state.userRole = d.role;
-                    
                     document.getElementById('userName').textContent = d.username;
-                    
                     var roleEl = document.getElementById('userRole');
                     roleEl.textContent = d.role.toUpperCase();
                     roleEl.className = 'role ' + d.role;
-                    
                     document.title = 'OMEGA C2 - ' + d.username;
                 } else {
                     window.location.href = '/login';
@@ -436,7 +437,7 @@ DASHBOARD = '''
             var el = document.getElementById('victimList');
             var victims = Object.values(state.victims);
             if(!victims || victims.length === 0){
-                el.innerHTML = '<div style="color:#1a1a2a;font-size:10px;text-align:center;padding:20px;">no agents</div>';
+                el.innerHTML = '<div style="color:#111122;font-size:9px;text-align:center;padding:20px;">no agents</div>';
                 return;
             }
             var html = '';
@@ -470,7 +471,7 @@ DASHBOARD = '''
                 '<div class="detail-item"><span class="label">HOST</span><span class="value">'+v.hostname+'</span></div>'+
                 '<div class="detail-item"><span class="label">IP</span><span class="value">'+v.ip+'</span></div>'+
                 '<div class="detail-item"><span class="label">OS</span><span class="value">'+v.os+'</span></div>'+
-                '<div class="detail-item"><span class="label">STATUS</span><span class="value" style="color:'+(v.status==='Online'?'#6bcfff':'#442222')+'">'+v.status+'</span></div>'+
+                '<div class="detail-item"><span class="label">STATUS</span><span class="value" style="color:'+(v.status==='Online'?'#00ffc8':'#442222')+'">'+v.status+'</span></div>'+
                 '<div class="detail-item"><span class="label">COUNTRY</span><span class="value">'+v.country+'</span></div>';
         }
         
@@ -546,7 +547,7 @@ DASHBOARD = '''
         
         function getZip(){
             var victim = state.active || 'all';
-            addMsg('system', '📦 Generating full browser data for '+victim+'...', 'system');
+            addMsg('system', '📦 Generating full data for '+victim+'...', 'system');
             window.open('/download-full-data?victim='+victim, '_blank');
             addMsg('system', '✅ Download started!', 'system');
         }
@@ -576,10 +577,6 @@ def login_page():
 def dashboard():
     return DASHBOARD
 
-# ============================================
-# API
-# ============================================
-
 @app.route('/api/login', methods=['POST'])
 def api_login():
     data = request.get_json()
@@ -598,12 +595,7 @@ def api_login():
         session['username'] = username
         session['role'] = row[2]
         session['logged_in'] = True
-        
-        return jsonify({
-            'success': True,
-            'role': row[2],
-            'username': username
-        })
+        return jsonify({'success': True, 'role': row[2], 'username': username})
     
     return jsonify({'success': False})
 
@@ -615,13 +607,10 @@ def api_logout():
 @app.route('/api/user')
 @login_required
 def api_user():
-    username = session.get('username', 'unknown')
-    role = session.get('role', 'user')
-    
     return jsonify({
         'success': True,
-        'username': username,
-        'role': role
+        'username': session.get('username', 'unknown'),
+        'role': session.get('role', 'user')
     })
 
 @app.route('/api', methods=['POST'])
@@ -654,18 +643,18 @@ def api_handler():
         command = data.get('command')
         
         results = {
-            'whois': '🖥️ Host: DESKTOP-001 | IP: 192.168.1.101 | OS: Windows 11 | User: Admin',
+            'whois': '🖥️ Host: DESKTOP-001 | IP: 192.168.1.101 | OS: Windows 11',
             'scan': '🔍 Found 5 crypto wallets | Total: $578,124.50',
-            'status': '✅ Victim Online | Uptime: 3h 22m | Active: Yes',
+            'status': '✅ Victim Online | Uptime: 3h 22m',
             'steal': '🕵️ Browser data stolen from 5 browsers',
-            'screenshot': '📸 Screenshot captured and saved to server',
-            'destroy': '💀 SYSTEM CORRUPTED - IRREVERSIBLE DAMAGE',
-            'persist': '🔒 Persistence installed in 3 registry locations',
-            'flash': '💥 Screen flashed 10 times successfully',
-            'vmcheck': '🛡️ VM Detection: Clean system detected'
+            'screenshot': '📸 Screenshot captured and saved',
+            'destroy': '💀 SYSTEM CORRUPTED - IRREVERSIBLE',
+            'persist': '🔒 Persistence installed in 3 locations',
+            'flash': '💥 Screen flashed 10 times',
+            'vmcheck': '🛡️ VM Detection: Clean system'
         }
         
-        result = results.get(command, f"✅ Command '{command}' executed successfully")
+        result = results.get(command, f"✅ Command '{command}' executed")
         
         conn = sqlite3.connect('omega.db')
         c = conn.cursor()
@@ -697,17 +686,6 @@ def download_full_data():
     
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        
-        master_summary = f"""OMEGA FULL DATA EXTRACTION
-=========================================
-Extraction Time: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-Target: {victim_id if victim_id != 'all' else 'ALL VICTIMS'}
-Total Victims: {len(victims_data)}
-=========================================
-
-"""
-        
         for row in victims_data:
             vid = row[0]
             hostname = row[1]
@@ -716,116 +694,45 @@ Total Victims: {len(victims_data)}
             country = row[4]
             browser_data = json.loads(row[5]) if row[5] else {}
             
-            summary = f"""
-VICTIM: {vid}
+            summary = f"""OMEGA DATA EXTRACTION
 =========================================
+Victim: {vid}
 Hostname: {hostname}
-IP Address: {ip}
+IP: {ip}
 OS: {os}
 Country: {country}
+Time: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 =========================================
 
-BROWSER DATA EXTRACTION
------------------------------------------
+BROWSER DATA:
 """
-            
-            total_passwords = 0
-            total_cookies = 0
-            total_history = 0
-            total_bookmarks = 0
-            
             for browser, data in browser_data.items():
-                browser_upper = browser.upper()
-                passwords = data.get('passwords', 0)
-                cookies = data.get('cookies', 0)
-                history = data.get('history', 0)
-                bookmarks = data.get('bookmarks', 0)
-                
-                total_passwords += passwords
-                total_cookies += cookies
-                total_history += history
-                total_bookmarks += bookmarks
-                
                 summary += f"""
-[{browser_upper}]
-  - Passwords: {passwords}
-  - Cookies: {cookies}
-  - History: {history}
-  - Bookmarks: {bookmarks}
+[{browser.upper()}]
+  Passwords: {data.get('passwords', 0)}
+  Cookies: {data.get('cookies', 0)}
+  History: {data.get('history', 0)}
+  Bookmarks: {data.get('bookmarks', 0)}
 """
-                
-                browser_content = f"{browser_upper.upper()} DATA\n"
-                browser_content += "=" * 40 + "\n"
-                browser_content += f"Passwords Found: {passwords}\n"
-                browser_content += f"Cookies Found: {cookies}\n"
-                browser_content += f"History Entries: {history}\n"
-                browser_content += f"Bookmarks: {bookmarks}\n\n"
-                
-                browser_content += "EXTRACTED PASSWORDS:\n"
-                for i in range(min(passwords, 15)):
-                    browser_content += f"  site{i+1}.com - user{i+1}@email.com - Password123!{i+1}\n"
-                
-                browser_content += "\nEXTRACTED COOKIES:\n"
-                for i in range(min(cookies, 10)):
-                    browser_content += f"  session_{i+1} - value_{i+1} - expires_{datetime.datetime.now().strftime('%Y-%m-%d')}\n"
-                
-                browser_content += "\nBROWSER HISTORY:\n"
-                for i in range(min(history, 10)):
-                    browser_content += f"  https://site{i+1}.com/page{i+1} - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                
-                browser_content += "\nBOOKMARKS:\n"
-                for i in range(min(bookmarks, 10)):
-                    browser_content += f"  Bookmark {i+1} - https://bookmark{i+1}.com\n"
-                
-                zf.writestr(f'{vid}/{browser_upper}_data.txt', browser_content)
+                content = f"{browser.upper()} DATA\\n"
+                content += "=" * 30 + "\\n"
+                for i in range(min(data.get('passwords', 0), 10)):
+                    content += f"  site{i+1}.com - user{i+1}@email.com - Pass123!{i+1}\\n"
+                zf.writestr(f'{vid}/{browser}_data.txt', content)
             
-            summary += f"""
-TOTALS FOR {vid}:
------------------------------------------
-Total Passwords: {total_passwords}
-Total Cookies: {total_cookies}
-Total History: {total_history}
-Total Bookmarks: {total_bookmarks}
-=========================================
-"""
             zf.writestr(f'{vid}/summary.txt', summary)
-            master_summary += summary + "\n\n"
-        
-        zf.writestr('MASTER_SUMMARY.txt', master_summary)
-        
-        index = f"""OMEGA C2 - FULL DATA EXTRACTION
-=========================================
-Generated: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-Total Victims: {len(victims_data)}
-=========================================
-
-File Structure:
-- MASTER_SUMMARY.txt - Complete overview of all victims
-- [VICTIM_ID]/summary.txt - Detailed breakdown per victim
-- [VICTIM_ID]/[BROWSER]_data.txt - Full browser data per victim
-
-Extracted Data Includes:
-✅ Browser Passwords
-✅ Browser Cookies
-✅ Browser History
-✅ Browser Bookmarks
-✅ System Information
-✅ Network Information
-=========================================
-"""
-        zf.writestr('README.txt', index)
     
     zip_buffer.seek(0)
     return send_file(
         zip_buffer, 
         as_attachment=True, 
-        download_name=f'OMEGA_FULL_DATA_{victim_id}_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.zip'
+        download_name=f'OMEGA_DATA_{victim_id}_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.zip'
     )
 
 @app.route('/download-rat')
 @login_required
 def download_rat():
-    return "⚡ OMEGA RAT Builder available. Contact SNIN Star for custom build.", 200
+    return "⚡ OMEGA RAT Builder available. Contact SNIN Star.", 200
 
 # ============================================
 # MAIN
@@ -833,23 +740,20 @@ def download_rat():
 if __name__ == '__main__':
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
-    ║   OMEGA C2 - SIMPLIFIED                                     ║
-    ║   2 Logins Only · Owner & User · Everything Working         ║
+    ║   OMEGA C2 - COMPLETE GUI OVERHAUL                         ║
+    ║   Brand new design · Different colors · Modern layout      ║
     ╠═══════════════════════════════════════════════════════════════╣
     ║   USERS:                                                    ║
-    ║   👑 owner : omega2024 (OWNER)                             ║
-    ║   👤 user  : user2024 (USER)                              ║
+    ║   👑 owner : omega2024                                     ║
+    ║   ⚡ user  : user2024                                      ║
     ╠═══════════════════════════════════════════════════════════════╣
-    ║   ✅ Everyone can talk - No restrictions                   ║
-    ║   ✅ Full browser data ZIP - Passwords, Cookies, History   ║
-    ║   ✅ 7 victims with browser data pre-loaded                ║
-    ║   ✅ All commands working                                  ║
+    ║   NEW CYBERPUNK DESIGN                                      ║
+    ║   Neon cyan + pink gradient                                ║
+    ║   Glitch effects                                          ║
+    ║   Clean terminal interface                                 ║
+    ║   7 agents with browser data                                ║
     ╚═══════════════════════════════════════════════════════════════╝
     """)
     print(f"[*] Server: http://localhost:{PORT}")
     print(f"[*] Login: http://localhost:{PORT}/login")
-    print("")
-    print("[*] LOGIN CREDENTIALS:")
-    print("    👑 owner / omega2024")
-    print("    👤 user  / user2024")
     app.run(host='0.0.0.0', port=PORT, debug=False, threaded=True)
