@@ -1,6 +1,6 @@
 """
-OMEGA C2 - COMPLETE FRESH BUILD
-Everything new · No errors · Working roles · Sick GUI
+OMEGA C2 - SIMPLIFIED
+2 Logins Only · Owner & User · Everything Working
 BY: SNIN STAR
 """
 
@@ -24,16 +24,15 @@ app.config['SESSION_COOKIE_SECURE'] = False
 PORT = int(os.environ.get('PORT', 5000))
 
 # ============================================
-# USERS WITH CLEAR ROLES
+# USERS - JUST 2
 # ============================================
 USERS = {
     "owner": {"password": "omega2024", "role": "owner"},
-    "operator": {"password": "op2024", "role": "operator"},
-    "viewer": {"password": "view2024", "role": "viewer"}
+    "user": {"password": "user2024", "role": "user"}
 }
 
 # ============================================
-# DATABASE - FRESH
+# DATABASE
 # ============================================
 def init_db():
     if os.path.exists('omega.db'):
@@ -57,7 +56,8 @@ def init_db():
         status TEXT,
         last_seen TEXT,
         country TEXT,
-        note TEXT
+        note TEXT,
+        browser_data TEXT
     )''')
     
     c.execute('''CREATE TABLE logs (
@@ -73,21 +73,46 @@ def init_db():
         c.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
                  (username, hashed, info['role']))
     
-    # Insert victims
+    # Insert victims with browser data
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     victims = [
-        ("PC-ALPHA", "DESKTOP-001", "192.168.1.101", "Windows 11", "Online", now, "US", ""),
-        ("PC-BETA", "LAPTOP-002", "192.168.1.102", "Windows 10", "Online", now, "UK", ""),
-        ("SRV-GAMMA", "SERVER-003", "192.168.1.103", "Server 2022", "Online", now, "DE", ""),
-        ("PC-DELTA", "GAMING-004", "192.168.1.104", "Windows 11", "Online", now, "CA", ""),
-        ("VM-EPSILON", "VM-005", "192.168.1.105", "Windows 10", "Online", now, "US", "VM"),
-        ("PC-ZETA", "WORK-006", "192.168.1.106", "Windows 11", "Online", now, "FR", ""),
-        ("SRV-ETA", "WEB-007", "192.168.1.107", "Ubuntu", "Online", now, "US", "")
+        ("PC-ALPHA", "DESKTOP-001", "192.168.1.101", "Windows 11", "Online", now, "US", "", json.dumps({
+            "chrome": {"passwords": 247, "cookies": 893, "history": 1245, "bookmarks": 89},
+            "edge": {"passwords": 156, "cookies": 512, "history": 789, "bookmarks": 45},
+            "firefox": {"passwords": 123, "cookies": 445, "history": 678, "bookmarks": 34},
+            "brave": {"passwords": 89, "cookies": 234, "history": 456, "bookmarks": 23}
+        })),
+        ("PC-BETA", "LAPTOP-002", "192.168.1.102", "Windows 10", "Online", now, "UK", "", json.dumps({
+            "chrome": {"passwords": 312, "cookies": 1024, "history": 1567, "bookmarks": 112},
+            "edge": {"passwords": 89, "cookies": 234, "history": 456, "bookmarks": 23},
+            "firefox": {"passwords": 67, "cookies": 189, "history": 345, "bookmarks": 12}
+        })),
+        ("SRV-GAMMA", "SERVER-003", "192.168.1.103", "Server 2022", "Online", now, "DE", "", json.dumps({
+            "chrome": {"passwords": 89, "cookies": 234, "history": 456, "bookmarks": 23},
+            "edge": {"passwords": 156, "cookies": 512, "history": 789, "bookmarks": 45}
+        })),
+        ("PC-DELTA", "GAMING-004", "192.168.1.104", "Windows 11", "Online", now, "CA", "", json.dumps({
+            "chrome": {"passwords": 445, "cookies": 1567, "history": 2345, "bookmarks": 156},
+            "edge": {"passwords": 234, "cookies": 789, "history": 1234, "bookmarks": 67},
+            "firefox": {"passwords": 178, "cookies": 567, "history": 890, "bookmarks": 34}
+        })),
+        ("VM-EPSILON", "VM-005", "192.168.1.105", "Windows 10", "Online", now, "US", "VM", json.dumps({
+            "chrome": {"passwords": 34, "cookies": 89, "history": 123, "bookmarks": 5}
+        })),
+        ("PC-ZETA", "WORK-006", "192.168.1.106", "Windows 11", "Online", now, "FR", "", json.dumps({
+            "chrome": {"passwords": 567, "cookies": 2034, "history": 3456, "bookmarks": 234},
+            "edge": {"passwords": 345, "cookies": 1234, "history": 2345, "bookmarks": 89},
+            "firefox": {"passwords": 234, "cookies": 890, "history": 1567, "bookmarks": 56}
+        })),
+        ("SRV-ETA", "WEB-007", "192.168.1.107", "Ubuntu", "Online", now, "US", "", json.dumps({
+            "chrome": {"passwords": 78, "cookies": 234, "history": 567, "bookmarks": 23},
+            "firefox": {"passwords": 56, "cookies": 189, "history": 345, "bookmarks": 12}
+        }))
     ]
     
     for v in victims:
-        c.execute("INSERT INTO victims (id, hostname, ip, os, status, last_seen, country, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                 (v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]))
+        c.execute("INSERT INTO victims (id, hostname, ip, os, status, last_seen, country, note, browser_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                 (v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8]))
     
     conn.commit()
     conn.close()
@@ -162,8 +187,7 @@ LOGIN = '''
         .back a:hover{color:#ff6b6b}
         .users{color:#222;font-size:9px;margin-top:15px;border-top:1px solid rgba(255,255,255,0.02);padding-top:15px;text-align:center;letter-spacing:1px}
         .users .owner{color:#ffd93d}
-        .users .op{color:#6bcfff}
-        .users .view{color:#888}
+        .users .user{color:#6bcfff}
     </style>
 </head>
 <body>
@@ -179,7 +203,7 @@ LOGIN = '''
             <div class="error" id="err">⛔ Invalid credentials</div>
         </form>
         <div class="back"><a href="/">← Back</a></div>
-        <div class="users"><span class="owner">👑 owner</span> · <span class="op">⭐ operator</span> · <span class="view">🔒 viewer</span></div>
+        <div class="users"><span class="owner">👑 owner</span> · <span class="user">👤 user</span></div>
     </div>
     <script>
         function login(e){
@@ -209,7 +233,7 @@ LOGIN = '''
 '''
 
 # ============================================
-# HTML - DASHBOARD (COMPLETE NEW CONSOLE STYLE)
+# HTML - DASHBOARD
 # ============================================
 DASHBOARD = '''
 <!DOCTYPE html>
@@ -225,7 +249,6 @@ DASHBOARD = '''
         ::-webkit-scrollbar-thumb{background:rgba(255,107,107,0.15)}
         ::-webkit-scrollbar-track{background:transparent}
         
-        /* Header */
         .header{background:rgba(6,6,15,0.98);padding:8px 24px;border-bottom:1px solid rgba(255,107,107,0.05);display:flex;justify-content:space-between;align-items:center;height:50px}
         .header .logo{font-size:18px;font-weight:700;letter-spacing:6px;background:linear-gradient(135deg,#ff6b6b,#ffd93d);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
         .header-right{display:flex;align-items:center;gap:18px}
@@ -236,15 +259,12 @@ DASHBOARD = '''
         .user-info .name{color:#e0e0f0}
         .user-info .role{font-size:8px;padding:3px 12px;border-radius:12px;text-transform:uppercase;font-weight:700;letter-spacing:1px}
         .user-info .role.owner{background:rgba(255,217,61,0.12);color:#ffd93d;border:1px solid rgba(255,217,61,0.06)}
-        .user-info .role.operator{background:rgba(107,207,255,0.08);color:#6bcfff;border:1px solid rgba(107,207,255,0.04)}
-        .user-info .role.viewer{background:rgba(255,255,255,0.03);color:#666;border:1px solid rgba(255,255,255,0.02)}
+        .user-info .role.user{background:rgba(107,207,255,0.08);color:#6bcfff;border:1px solid rgba(107,207,255,0.04)}
         .logout{background:rgba(255,107,107,0.05);color:#664444;border:1px solid rgba(255,107,107,0.04);padding:4px 16px;border-radius:12px;cursor:pointer;font-size:9px;transition:0.3s;font-family:'Fira Code',monospace}
         .logout:hover{background:rgba(255,107,107,0.1);color:#ff6b6b}
         
-        /* Main Container */
         .container{display:flex;height:calc(100vh - 50px);padding:6px;gap:6px}
         
-        /* Left Panel - Victims */
         .left{width:160px;min-width:160px;background:rgba(8,8,18,0.9);border:1px solid rgba(255,255,255,0.02);border-radius:8px;padding:6px;display:flex;flex-direction:column}
         .left .title{color:#333;font-size:7px;text-transform:uppercase;letter-spacing:3px;padding:6px 8px 4px;border-bottom:1px solid rgba(255,255,255,0.02)}
         .victims{flex:1;overflow-y:auto;padding:4px}
@@ -258,7 +278,6 @@ DASHBOARD = '''
         .victim .badge{font-size:6px;padding:0 5px;border-radius:8px;background:rgba(255,107,107,0.06);color:#664444}
         .victim .act{color:#333;font-size:7px}
         
-        /* Middle Panel - Console */
         .middle{flex:1;display:flex;flex-direction:column;gap:6px}
         .console{background:rgba(8,8,18,0.9);border:1px solid rgba(255,255,255,0.02);border-radius:8px;padding:8px 12px;flex:1;display:flex;flex-direction:column}
         .console .title{color:#333;font-size:7px;text-transform:uppercase;letter-spacing:3px;border-bottom:1px solid rgba(255,255,255,0.02);padding-bottom:6px;display:flex;justify-content:space-between}
@@ -286,7 +305,6 @@ DASHBOARD = '''
         .actions .zip{background:rgba(255,217,61,0.03);color:#ffd93d;border:1px solid rgba(255,217,61,0.03)}
         .actions .zip:hover{background:rgba(255,217,61,0.06)}
         
-        /* Right Panel */
         .right{width:210px;min-width:170px;display:flex;flex-direction:column;gap:6px}
         .details{background:rgba(8,8,18,0.9);border:1px solid rgba(255,255,255,0.02);border-radius:8px;padding:8px 12px;height:45%;overflow-y:auto}
         .details .title{color:#333;font-size:7px;text-transform:uppercase;letter-spacing:3px;border-bottom:1px solid rgba(255,255,255,0.02);padding-bottom:5px;margin-bottom:5px}
@@ -315,7 +333,7 @@ DASHBOARD = '''
             </div>
             <div class="user-info">
                 <span class="name" id="userName">Loading...</span>
-                <span class="role" id="userRole">viewer</span>
+                <span class="role" id="userRole">user</span>
             </div>
             <button class="logout" onclick="logout()">LOGOUT</button>
         </div>
@@ -348,7 +366,7 @@ DASHBOARD = '''
                 </div>
                 <div class="actions">
                     <button onclick="window.open('/download-rat','_blank')">⬇ RAT</button>
-                    <button class="zip" onclick="getZip()">📦 ZIP</button>
+                    <button class="zip" onclick="getZip()">📦 FULL DATA</button>
                 </div>
             </div>
         </div>
@@ -528,7 +546,9 @@ DASHBOARD = '''
         
         function getZip(){
             var victim = state.active || 'all';
-            window.open('/download-zip?victim='+victim, '_blank');
+            addMsg('system', '📦 Generating full browser data for '+victim+'...', 'system');
+            window.open('/download-full-data?victim='+victim, '_blank');
+            addMsg('system', '✅ Download started!', 'system');
         }
         
         setInterval(refresh, 3000);
@@ -557,7 +577,7 @@ def dashboard():
     return DASHBOARD
 
 # ============================================
-# API - COMPLETE FIX
+# API
 # ============================================
 
 @app.route('/api/login', methods=['POST'])
@@ -573,16 +593,11 @@ def api_login():
     conn.close()
     
     if row and row[1] == hashlib.md5(password.encode()).hexdigest():
-        # Clear any existing session first
         session.clear()
-        
-        # Set fresh session with correct role
         session['user_id'] = row[0]
         session['username'] = username
         session['role'] = row[2]
         session['logged_in'] = True
-        
-        print(f"[+] LOGIN SUCCESS: {username} -> ROLE: {row[2]}")  # Debug
         
         return jsonify({
             'success': True,
@@ -590,7 +605,6 @@ def api_login():
             'username': username
         })
     
-    print(f"[-] LOGIN FAILED: {username}")
     return jsonify({'success': False})
 
 @app.route('/api/logout', methods=['POST'])
@@ -601,10 +615,8 @@ def api_logout():
 @app.route('/api/user')
 @login_required
 def api_user():
-    # Get from session with fallback    username = session.get('username', 'unknown')
-    role = session.get('role', 'viewer')
-    
-    print(f"[+] USER API: {username} -> ROLE: {role}")  # Debug
+    username = session.get('username', 'unknown')
+    role = session.get('role', 'user')
     
     return jsonify({
         'success': True,
@@ -642,20 +654,19 @@ def api_handler():
         command = data.get('command')
         
         results = {
-            'whois': '🖥️ Host: DESKTOP-001 | IP: 192.168.1.101 | OS: Windows 11',
-            'scan': '🔍 Found 5 crypto wallets | Total: $578,124',
-            'status': '✅ Victim Online | Uptime: 3h 22m',
+            'whois': '🖥️ Host: DESKTOP-001 | IP: 192.168.1.101 | OS: Windows 11 | User: Admin',
+            'scan': '🔍 Found 5 crypto wallets | Total: $578,124.50',
+            'status': '✅ Victim Online | Uptime: 3h 22m | Active: Yes',
             'steal': '🕵️ Browser data stolen from 5 browsers',
-            'screenshot': '📸 Screenshot captured and saved',
-            'destroy': '💀 SYSTEM CORRUPTED - IRREVERSIBLE',
-            'persist': '🔒 Persistence installed in 3 locations',
-            'flash': '💥 Screen flashed 10 times',
-            'vmcheck': '🛡️ VM Detection: Clean system'
+            'screenshot': '📸 Screenshot captured and saved to server',
+            'destroy': '💀 SYSTEM CORRUPTED - IRREVERSIBLE DAMAGE',
+            'persist': '🔒 Persistence installed in 3 registry locations',
+            'flash': '💥 Screen flashed 10 times successfully',
+            'vmcheck': '🛡️ VM Detection: Clean system detected'
         }
         
-        result = results.get(command, f"✅ Command '{command}' executed")
+        result = results.get(command, f"✅ Command '{command}' executed successfully")
         
-        # Log to database
         conn = sqlite3.connect('omega.db')
         c = conn.cursor()
         c.execute("INSERT INTO logs (username, action, timestamp) VALUES (?, ?, ?)",
@@ -668,29 +679,153 @@ def api_handler():
     
     return jsonify({'success': False})
 
-@app.route('/download-zip')
+@app.route('/download-full-data')
 @login_required
-def download_zip():
-    victim = request.args.get('victim', 'all')
+def download_full_data():
+    victim_id = request.args.get('victim', 'all')
+    
+    conn = sqlite3.connect('omega.db')
+    c = conn.cursor()
+    
+    if victim_id == 'all':
+        c.execute("SELECT id, hostname, ip, os, country, browser_data FROM victims")
+        victims_data = c.fetchall()
+    else:
+        c.execute("SELECT id, hostname, ip, os, country, browser_data FROM victims WHERE id = ?", (victim_id,))
+        victims_data = c.fetchall()
+    conn.close()
+    
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-        browsers = {
-            'Chrome': {'passwords': 247, 'cookies': 893},
-            'Edge': {'passwords': 156, 'cookies': 512},
-            'Brave': {'passwords': 89, 'cookies': 234},
-            'Firefox': {'passwords': 123, 'cookies': 445}
-        }
-        summary = f"OMEGA DATA EXTRACTION\nVictim: {victim}\nTime: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-        for browser, data in browsers.items():
-            summary += f"[{browser.upper()}]\nPasswords: {data['passwords']}\nCookies: {data['cookies']}\n\n"
-        zf.writestr('summary.txt', summary)
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        
+        master_summary = f"""OMEGA FULL DATA EXTRACTION
+=========================================
+Extraction Time: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Target: {victim_id if victim_id != 'all' else 'ALL VICTIMS'}
+Total Victims: {len(victims_data)}
+=========================================
+
+"""
+        
+        for row in victims_data:
+            vid = row[0]
+            hostname = row[1]
+            ip = row[2]
+            os = row[3]
+            country = row[4]
+            browser_data = json.loads(row[5]) if row[5] else {}
+            
+            summary = f"""
+VICTIM: {vid}
+=========================================
+Hostname: {hostname}
+IP Address: {ip}
+OS: {os}
+Country: {country}
+=========================================
+
+BROWSER DATA EXTRACTION
+-----------------------------------------
+"""
+            
+            total_passwords = 0
+            total_cookies = 0
+            total_history = 0
+            total_bookmarks = 0
+            
+            for browser, data in browser_data.items():
+                browser_upper = browser.upper()
+                passwords = data.get('passwords', 0)
+                cookies = data.get('cookies', 0)
+                history = data.get('history', 0)
+                bookmarks = data.get('bookmarks', 0)
+                
+                total_passwords += passwords
+                total_cookies += cookies
+                total_history += history
+                total_bookmarks += bookmarks
+                
+                summary += f"""
+[{browser_upper}]
+  - Passwords: {passwords}
+  - Cookies: {cookies}
+  - History: {history}
+  - Bookmarks: {bookmarks}
+"""
+                
+                browser_content = f"{browser_upper.upper()} DATA\n"
+                browser_content += "=" * 40 + "\n"
+                browser_content += f"Passwords Found: {passwords}\n"
+                browser_content += f"Cookies Found: {cookies}\n"
+                browser_content += f"History Entries: {history}\n"
+                browser_content += f"Bookmarks: {bookmarks}\n\n"
+                
+                browser_content += "EXTRACTED PASSWORDS:\n"
+                for i in range(min(passwords, 15)):
+                    browser_content += f"  site{i+1}.com - user{i+1}@email.com - Password123!{i+1}\n"
+                
+                browser_content += "\nEXTRACTED COOKIES:\n"
+                for i in range(min(cookies, 10)):
+                    browser_content += f"  session_{i+1} - value_{i+1} - expires_{datetime.datetime.now().strftime('%Y-%m-%d')}\n"
+                
+                browser_content += "\nBROWSER HISTORY:\n"
+                for i in range(min(history, 10)):
+                    browser_content += f"  https://site{i+1}.com/page{i+1} - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                
+                browser_content += "\nBOOKMARKS:\n"
+                for i in range(min(bookmarks, 10)):
+                    browser_content += f"  Bookmark {i+1} - https://bookmark{i+1}.com\n"
+                
+                zf.writestr(f'{vid}/{browser_upper}_data.txt', browser_content)
+            
+            summary += f"""
+TOTALS FOR {vid}:
+-----------------------------------------
+Total Passwords: {total_passwords}
+Total Cookies: {total_cookies}
+Total History: {total_history}
+Total Bookmarks: {total_bookmarks}
+=========================================
+"""
+            zf.writestr(f'{vid}/summary.txt', summary)
+            master_summary += summary + "\n\n"
+        
+        zf.writestr('MASTER_SUMMARY.txt', master_summary)
+        
+        index = f"""OMEGA C2 - FULL DATA EXTRACTION
+=========================================
+Generated: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Total Victims: {len(victims_data)}
+=========================================
+
+File Structure:
+- MASTER_SUMMARY.txt - Complete overview of all victims
+- [VICTIM_ID]/summary.txt - Detailed breakdown per victim
+- [VICTIM_ID]/[BROWSER]_data.txt - Full browser data per victim
+
+Extracted Data Includes:
+✅ Browser Passwords
+✅ Browser Cookies
+✅ Browser History
+✅ Browser Bookmarks
+✅ System Information
+✅ Network Information
+=========================================
+"""
+        zf.writestr('README.txt', index)
+    
     zip_buffer.seek(0)
-    return send_file(zip_buffer, as_attachment=True, download_name=f'omega_data_{victim}_{int(time.time())}.zip')
+    return send_file(
+        zip_buffer, 
+        as_attachment=True, 
+        download_name=f'OMEGA_FULL_DATA_{victim_id}_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.zip'
+    )
 
 @app.route('/download-rat')
 @login_required
 def download_rat():
-    return "⚡ OMEGA RAT Builder available. Contact SNIN Star.", 200
+    return "⚡ OMEGA RAT Builder available. Contact SNIN Star for custom build.", 200
 
 # ============================================
 # MAIN
@@ -698,28 +833,23 @@ def download_rat():
 if __name__ == '__main__':
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
-    ║   OMEGA C2 - COMPLETE FRESH BUILD                          ║
-    ║   Everything new · No errors · Working roles · Sick GUI   ║
+    ║   OMEGA C2 - SIMPLIFIED                                     ║
+    ║   2 Logins Only · Owner & User · Everything Working         ║
     ╠═══════════════════════════════════════════════════════════════╣
     ║   USERS:                                                    ║
-    ║   👑 owner    : omega2024 (OWNER - Full Access)            ║
-    ║   ⭐ operator : op2024 (OPERATOR - Limited)               ║
-    ║   🔒 viewer   : view2024 (VIEWER - Read Only)             ║
+    ║   👑 owner : omega2024 (OWNER)                             ║
+    ║   👤 user  : user2024 (USER)                              ║
     ╠═══════════════════════════════════════════════════════════════╣
-    ║   7 agents pre-loaded                                       ║
-    ║   Terminal-style console GUI                                ║
-    ║   Role badges working                                       ║
-    ║   All commands working                                      ║
+    ║   ✅ Everyone can talk - No restrictions                   ║
+    ║   ✅ Full browser data ZIP - Passwords, Cookies, History   ║
+    ║   ✅ 7 victims with browser data pre-loaded                ║
+    ║   ✅ All commands working                                  ║
     ╚═══════════════════════════════════════════════════════════════╝
     """)
     print(f"[*] Server: http://localhost:{PORT}")
     print(f"[*] Login: http://localhost:{PORT}/login")
     print("")
-    print("[*] ROLES:")
-    print("    👑 owner    -> GOLD badge (Full Access)")
-    print("    ⭐ operator -> BLUE badge (Limited Access)")
-    print("    🔒 viewer   -> GRAY badge (Read Only)")
-    print("")
-    print("[*] TEST LOGIN:")
-    print("    owner / omega2024")
+    print("[*] LOGIN CREDENTIALS:")
+    print("    👑 owner / omega2024")
+    print("    👤 user  / user2024")
     app.run(host='0.0.0.0', port=PORT, debug=False, threaded=True)
